@@ -1,0 +1,5 @@
+# Giu xuong dong LF cho code chay trong container Linux; PowerShell giu CRLF.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.jpg binary
+*.png binary

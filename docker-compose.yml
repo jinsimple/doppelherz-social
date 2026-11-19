@@ -1,0 +1,118 @@
+# SocialSync - website demo WordPress + WooCommerce
+# Chay tu thu muc du an:  docker compose up -d
+# Ten du an co dinh la "shop" => container: shop-wordpress-1, shop-db-1
+name: shop
+
+x-wp-env: &wp-env
+  WORDPRESS_DB_HOST: db
+  WORDPRESS_DB_NAME: wordpress
+  WORDPRESS_DB_USER: wordpress
+  WORDPRESS_DB_PASSWORD: ${DB_PASSWORD:?Thieu DB_PASSWORD trong file .env}
+  WORDPRESS_DEBUG: "1"
+  # Ma bi mat dung chung voi n8n (plugin SocialSync doc bang getenv)
+  SOCIALSYNC_SECRET: ${SOCIALSYNC_SECRET:?Thieu SOCIALSYNC_SECRET trong file .env}
+  # $$ de docker compose khong coi la bien cua Compose; PHP nhan duoc $
+  WORDPRESS_CONFIG_EXTRA: |
+    if (isset($$_SERVER['HTTP_CF_VISITOR']) && strpos($$_SERVER['HTTP_CF_VISITOR'], 'https') !== false) { $$_SERVER['HTTPS'] = 'on'; }
+    define('WP_DEBUG_LOG', '/var/log/socialsync/wp-debug.log');
+    define('WP_DEBUG_DISPLAY', false);
+    define('DISALLOW_FILE_EDIT', true);
+
+x-wp-volumes: &wp-volumes
+  - wp_data:/var/www/html
+  # Code plugin nam trong thu muc du an, sua bang VS Code la co hieu luc ngay
+  - ./plugin/social-sync:/var/www/html/wp-content/plugins/social-sync
+  # Log nam ngoai webroot => khong mo duoc qua trinh duyet
+  - ./logs:/var/log/socialsync
+  # Gioi han bo nho / dung luong tai len cua PHP
+  - ./docker/php/socialsync.ini:/usr/local/etc/php/conf.d/zz-socialsync.ini:ro
+
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: wordpress
+      MARIADB_PASSWORD: ${DB_PASSWORD:?Thieu DB_PASSWORD trong file .env}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Thieu DB_ROOT_PASSWORD trong file .env}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - default
+
+  wordpress:
+    image: wordpress:php8.3-apache
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8088:80"
+    environment: *wp-env
+    volumes: *wp-volumes
+    networks:
+      - default
+      # Mang cua cloudflared (FIN05). Chi tham gia, khong sua gi cua FIN05.
+      - fin05_default
+
+  # WP-CLI: chi chay khi goi  docker compose run --rm wpcli wp ...
+  wpcli:
+    image: wordpress:cli-php8.3
+    profiles: ["tools"]
+    user: "33:33"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *wp-env
+    volumes: *wp-volumes
+    networks:
+      - default
+
+  # n8n: loi xu ly (nhan bai tu WordPress, goi Claude, dang Facebook / Pinterest)
+  # Trong may: http://localhost:5678   |  Ben ngoai: https://n8n.adaptivealgo.uk
+  # WordPress goi n8n qua mang noi bo: http://n8n:5678
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      N8N_HOST: n8n.adaptivealgo.uk
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: https
+      N8N_WEBHOOK_URL: https://n8n.adaptivealgo.uk/
+      N8N_EDITOR_BASE_URL: https://n8n.adaptivealgo.uk/
+      # Dung sau Cloudflare Tunnel (1 lop proxy)
+      N8N_PROXY_HOPS: "1"
+      NODE_ENV: production
+      GENERIC_TIMEZONE: Asia/Ho_Chi_Minh
+      TZ: Asia/Ho_Chi_Minh
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+      # Luong chi doc/ghi duoc file trong /files (= thu muc n8n/ cua du an)
+      N8N_RESTRICT_FILE_ACCESS_TO: /files
+      # Luu day du du lieu tung khoi cua moi luot chay de go loi
+      EXECUTIONS_DATA_SAVE_ON_SUCCESS: all
+      EXECUTIONS_DATA_SAVE_ON_ERROR: all
+      EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS: "true"
+      N8N_DIAGNOSTICS_ENABLED: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n:/files
+    networks:
+      - default
+      - fin05_default
+
+volumes:
+  db_data:
+  wp_data:
+  n8n_data:
+
+networks:
+  fin05_default:
+    external: true

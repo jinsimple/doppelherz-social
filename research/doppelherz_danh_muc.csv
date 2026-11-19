@@ -1,0 +1,43 @@
+﻿id,count,name,slug,parent
+3,1300,Kiến thức sức khỏe,kien-thuc-suc-khoe,0
+14,353,Sức khỏe trẻ em,suc-khoe-tre-em,3
+797,267,Vitamin và Khoáng chất,vitamin-va-khoang-chat,3
+17,237,Những bệnh lý thường gặp,nhung-benh-ly-thuong-gap,3
+15,202,Sức khỏe phụ nữ mang thai,suc-khoe-phu-nu-mang-thai,3
+1,202,Sự kiện,su-kien,0
+16,179,Làm đẹp,lam-dep,3
+787,136,Tin nội bộ,tin-noi-bo,0
+4144,126,Chương trình khuyến mại,chuong-trinh-khuyen-mai,0
+1160,114,Báo chí nói về chúng tôi,bao-chi-noi-ve-chung-toi,0
+794,105,Xương khớp,xuong-khop,3
+909,96,Sức khỏe phụ nữ,suc-khoe-phu-nu,0
+1547,96,Báo chí nói về Doppelherz,bao-chi-noi-ve-doppelherz,0
+19,57,Trách nhiệm xã hội công ty,trach-nhiem-xa-hoi-cong-ty,0
+897,56,Tăng sức đề kháng,tang-suc-de-khang,0
+798,42,Mãn kinh,man-kinh,3
+1011,39,Aktiv Meno,aktiv-meno,0
+5,39,Hoạt động nổi bật,hoat-dong-noi-bat,0
+964,34,Hãng và công ty,hang-va-cong-ty,0
+4079,18,Health knowledge,health-knowledge,0
+793,11,Tiểu đường,tieu-duong,3
+1100,11,Cơ hội nghề nghiệp,co-hoi-nghe-nghiep,0
+923,9,Rụng tóc,rung-toc,0
+791,8,Huyết áp,huyet-ap,3
+4087,7,Beauty care,beauty-care,4079
+918,5,Mất ngủ,mat-ngu,0
+4038,5,Events,events,0
+4151,4,Vững bước chinh phục - Golf,vung-buoc-chinh-phuc-golf,0
+4143,3,Chương trình Trainee Doppelherz,trainee-doppelherz,1100
+4095,1,Children's health,children-health,4079
+4105,1,Social responsibilities,social-responsibilities,0
+4091,1,Common Diseases,common-diseases,4079
+2456,1,Uncategorized,uncategorized,0
+4113,0,Career opportunities,career-opportunities,0
+4085,0,Blood pressure,blood-pressure,4079
+4089,0,Menopause,menopause,4079
+4093,0,Maternal health,maternal-health,4079
+4103,0,Internal news,internal-news,0
+4097,0,Diabetes,diabetes,4079
+4111,0,Media talks about us,media-talks-about-us,0
+4101,0,Osteoarthritis,osteoarthritis,4079
+4099,0,Vitamins and Minerals,vitamins-and-minerals,4079

@@ -1,0 +1,8 @@
+# Bi mat va du lieu may
+.env
+logs/
+n8n/.tmp-*
+
+# Anh ghep 12 Pin cua Doppelherz Duc: tai san hinh anh cua cong ty khac,
+# chi dung de tham chieu bo cuc tren may, khong dua len repo cong khai.
+research/pinterest_de_12_pin_mau.jpg

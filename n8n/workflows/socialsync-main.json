@@ -1,0 +1,80 @@
+{
+  "id": "SocialSyncMain01",
+  "name": "SocialSync - Đồng bộ bài từ WordPress",
+  "active": false,
+  "nodes": [
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1a01",
+      "name": "Nhận bài từ WordPress",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "8d6a2f1e-3b4c-4d5e-9f60-7a8b9c0d1e21",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "socialsync/publish",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SocSyncSecret001",
+          "name": "SocialSync - mã bí mật từ WordPress"
+        }
+      }
+    },
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1a02",
+      "name": "Kiểm tra dữ liệu",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0],
+      "parameters": {
+        "jsCode": "// Nấc 1: kiểm tra dữ liệu WordPress gửi sang và chuẩn bị câu trả lời.\n// Mọi tín hiệu kiểm tra được giữ lại trong output để xem ở tab Executions.\nconst receivedAt = new Date().toISOString();\nconst input = $input.first().json;\nconst body = input.body ?? {};\nconst headers = input.headers ?? {};\nconst executionId = $execution.id;\nconst requestId = body.request_id ?? headers['x-socialsync-request-id'] ?? null;\n\nconst trace = {\n  received_at: receivedAt,\n  request_id: requestId,\n  plugin_version: headers['x-socialsync-version'] ?? null,\n  content_type: headers['content-type'] ?? null,\n  event: body.event ?? null,\n};\n\nif (body.event === 'test') {\n  return [{ json: {\n    http_status: 200,\n    response: { ok: true, test: true, execution_id: executionId, request_id: requestId, received_at: receivedAt },\n    trace,\n    data: body,\n  } }];\n}\n\nconst problems = [];\nconst need = (cond, msg) => { if (!cond) problems.push(msg); };\nconst jobs = Array.isArray(body.jobs) ? body.jobs : [];\n\nneed(body.event === 'post_published', `event không hợp lệ: ${JSON.stringify(body.event)}`);\nneed(Number.isInteger(body.post_id) && body.post_id > 0, 'thiếu hoặc sai post_id');\nneed(['post', 'product'].includes(body.post_type), `post_type không hỗ trợ: ${JSON.stringify(body.post_type)}`);\nneed(typeof body.title === 'string' && body.title.trim() !== '', 'thiếu title');\nneed(typeof body.source_url === 'string' && /^https?:\\/\\//.test(body.source_url), 'thiếu hoặc sai source_url');\nneed(jobs.length > 0, 'không có lượt đồng bộ nào (jobs rỗng)');\nfor (const j of jobs) {\n  need(Number.isInteger(j.job_id) && j.job_id > 0, `lượt thiếu job_id: ${JSON.stringify(j)}`);\n  need(['facebook', 'pinterest'].includes(j.channel), `kênh không hỗ trợ: ${JSON.stringify(j.channel)}`);\n}\n\nconst signals = {\n  post_type: body.post_type ?? null,\n  channels: jobs.map(j => j.channel),\n  delays_minutes: Object.fromEntries(jobs.map(j => [j.channel, j.delay_minutes ?? 0])),\n  has_image: Boolean(body.image_url),\n  image_size: body.image ? `${body.image.width}x${body.image.height}` : null,\n  title_chars: (body.title ?? '').length,\n  content_chars: (body.content_text ?? '').length,\n  excerpt_chars: (body.excerpt ?? '').length,\n  categories: body.categories ?? [],\n  has_price: Boolean(body.price && body.price.price),\n  pinterest_will_skip: jobs.some(j => j.channel === 'pinterest') && !body.image_url,\n};\n\nif (problems.length) {\n  return [{ json: {\n    http_status: 422,\n    response: { ok: false, execution_id: executionId, request_id: requestId, error: problems.join('; ') },\n    problems,\n    signals,\n    trace,\n    data: body,\n  } }];\n}\n\nreturn [{ json: {\n  http_status: 202,\n  response: {\n    ok: true,\n    execution_id: executionId,\n    request_id: requestId,\n    received_at: receivedAt,\n    accepted_jobs: jobs.map(j => j.job_id),\n  },\n  signals,\n  trace,\n  data: body,\n} }];\n"
+      }
+    },
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1a03",
+      "name": "Trả lời WordPress",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [520, 0],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.response) }}",
+        "options": {
+          "responseCode": "={{ $json.http_status }}"
+        }
+      }
+    },
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1a04",
+      "name": "Nấc 2: tạo nội dung và đăng (chưa làm)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [780, 0],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Nhận bài từ WordPress": {
+      "main": [[{ "node": "Kiểm tra dữ liệu", "type": "main", "index": 0 }]]
+    },
+    "Kiểm tra dữ liệu": {
+      "main": [[{ "node": "Trả lời WordPress", "type": "main", "index": 0 }]]
+    },
+    "Trả lời WordPress": {
+      "main": [[{ "node": "Nấc 2: tạo nội dung và đăng (chưa làm)", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "saveManualExecutions": true,
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  "pinData": {},
+  "tags": []
+}

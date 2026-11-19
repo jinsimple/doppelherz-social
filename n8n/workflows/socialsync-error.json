@@ -1,0 +1,75 @@
+{
+  "id": "SocialSyncError01",
+  "name": "SocialSync - Báo lỗi",
+  "active": false,
+  "nodes": [
+    {
+      "id": "7c1e9a3b-2d4f-4a6b-8c0d-1e2f3a4b5c01",
+      "name": "Khi luồng chính bị lỗi",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "7c1e9a3b-2d4f-4a6b-8c0d-1e2f3a4b5c02",
+      "name": "Tóm tắt lỗi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0],
+      "parameters": {
+        "jsCode": "// n8n gọi luồng này khi một lần chạy của luồng chính dừng vì lỗi (khối nào đó ném lỗi, không có \"tiếp tục khi lỗi\").\n// Gom thông tin cần thiết để báo WordPress đánh dấu các lượt còn mở là \"failed\".\nconst e = $input.first().json;\nconst exec = e.execution ?? {};\nconst wf = e.workflow ?? {};\nconst err = exec.error ?? {};\n\nconst info = {\n  workflow_id: wf.id ?? null,\n  workflow_name: wf.name ?? null,\n  execution_id: exec.id ?? null,\n  execution_url: exec.url ?? null,\n  mode: exec.mode ?? null,\n  node: exec.lastNodeExecuted ?? err.node?.name ?? null,\n  error: [err.message, err.description].filter(Boolean).join(' | ').slice(0, 1500) || 'không có thông báo lỗi',\n  retry_of: exec.retryOf ?? null,\n};\nconsole.log('[socialsync] Luồng chính lỗi', JSON.stringify(info));\n\n// Chỉ xử lý lỗi của luồng SocialSync chính và lần chạy có mã số (lỗi lúc kích hoạt luồng không có lần chạy).\nif (info.workflow_id !== 'SocialSyncMain01' || !info.execution_id) {\n  console.log('[socialsync] Bỏ qua: không phải lần chạy của luồng SocialSyncMain01');\n  return [];\n}\nreturn [{ json: info }];\n"
+      }
+    },
+    {
+      "id": "7c1e9a3b-2d4f-4a6b-8c0d-1e2f3a4b5c03",
+      "name": "Báo WordPress: lần chạy lỗi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'http://wordpress/wp-json/social-sync/v1/executions/' + $json.execution_id + '/failed' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ node: $json.node, error: $json.error, workflow: $json.workflow_id, execution_url: $json.execution_url }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": { "response": { "fullResponse": true, "neverError": true } }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": { "id": "SocSyncSecret001", "name": "SocialSync - mã bí mật từ WordPress" }
+      }
+    },
+    {
+      "id": "7c1e9a3b-2d4f-4a6b-8c0d-1e2f3a4b5c04",
+      "name": "Ghi kết quả",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 0],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst info = $('Tóm tắt lỗi').first().json;\nconst ok = r.statusCode === 200 && r.body && r.body.ok === true;\nconsole.log('[socialsync] WordPress trả lời báo lỗi', JSON.stringify({ ok, statusCode: r.statusCode ?? null, body: r.body ?? null, error: r.error?.message ?? null }));\nreturn [{ json: { ...info, wordpress_ok: ok, wordpress_status: r.statusCode ?? null, failed_jobs: r.body?.failed_jobs ?? [], closed: r.body?.closed ?? [] } }];\n"
+      }
+    }
+  ],
+  "connections": {
+    "Khi luồng chính bị lỗi": { "main": [[{ "node": "Tóm tắt lỗi", "type": "main", "index": 0 }]] },
+    "Tóm tắt lỗi": { "main": [[{ "node": "Báo WordPress: lần chạy lỗi", "type": "main", "index": 0 }]] },
+    "Báo WordPress: lần chạy lỗi": { "main": [[{ "node": "Ghi kết quả", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  "pinData": {},
+  "tags": []
+}

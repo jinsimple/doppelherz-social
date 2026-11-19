@@ -5,6 +5,7 @@
  *   GET  /wp-json/social-sync/v1/status      n8n kiểm tra kết nối và mã bí mật.
  *   POST /wp-json/social-sync/v1/jobs/{id}   n8n báo trạng thái / kết quả của một lượt (PRD mục 7.3).
  *   POST /wp-json/social-sync/v1/dispatch    Tiến trình nền do chính plugin mở để gửi bài sang n8n.
+ *   POST /wp-json/social-sync/v1/executions/{id}/failed   Luồng báo lỗi của n8n: một lần chạy bị lỗi giữa chừng.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -52,6 +53,15 @@ final class SocialSync_REST {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( __CLASS__, 'update_job' ),
+				'permission_callback' => array( __CLASS__, 'auth' ),
+			)
+		);
+		register_rest_route(
+			self::NS,
+			'/executions/(?P<id>\d+)/failed',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'execution_failed' ),
 				'permission_callback' => array( __CLASS__, 'auth' ),
 			)
 		);
@@ -317,6 +327,56 @@ final class SocialSync_REST {
 
 		SocialSync_Dispatcher::dispatch_post( $post_id, $jobs );
 		return self::reply( 200, array( 'ok' => true, 'dispatched' => array_column( $jobs, 'job_id' ) ) );
+	}
+
+	/**
+	 * Luồng báo lỗi của n8n (SocialSync - Báo lỗi) gọi vào đây khi một lần chạy của luồng chính bị lỗi giữa chừng.
+	 * Mọi lượt còn đang mở (pending, generating, scheduled) gắn với lần chạy đó chuyển sang "failed" kèm lý do,
+	 * thay vì đứng yên tới khi trang Nhật ký cảnh báo sau 15 phút.
+	 */
+	public static function execution_failed( WP_REST_Request $req ): WP_REST_Response {
+		global $wpdb;
+		$exec_id = (string) (int) $req['id'];
+		$body    = $req->get_json_params();
+		$body    = is_array( $body ) ? $body : array();
+		$node    = mb_substr( sanitize_text_field( (string) ( $body['node'] ?? '' ) ), 0, 120 );
+		$message = mb_substr( wp_strip_all_tags( (string) ( $body['error'] ?? '' ) ), 0, 2000 );
+		$log     = array(
+			'execution_id' => $exec_id,
+			'node'         => $node,
+			'error'        => $message,
+			'workflow'     => $body['workflow'] ?? null,
+		);
+		SocialSync_Logger::error( 'n8n.execution_failed', 'n8n báo một lần chạy bị lỗi', $log );
+
+		$table = SocialSync_DB::table();
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT id, post_id, channel, status FROM {$table} WHERE execution_id = %s", $exec_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$open   = array();
+		$closed = array();
+		foreach ( (array) $rows as $row ) {
+			if ( in_array( $row['status'], array( 'pending', 'generating', 'scheduled' ), true ) ) {
+				$open[] = (int) $row['id'];
+			} else {
+				$closed[] = array( 'job_id' => (int) $row['id'], 'status' => (string) $row['status'] );
+			}
+		}
+
+		if ( ! $open ) {
+			SocialSync_Logger::warn( 'n8n.execution_failed.none_open', 'Không có lượt nào còn mở của lần chạy này', $log + array( 'found' => count( (array) $rows ), 'closed' => $closed ) );
+			return self::reply( 200, array( 'ok' => true, 'failed_jobs' => array(), 'closed' => $closed ) );
+		}
+
+		$reason = sprintf(
+			'n8n lỗi ở khối "%s" (lần chạy #%s): %s',
+			'' !== $node ? $node : 'không rõ',
+			$exec_id,
+			'' !== $message ? $message : 'không có thông báo lỗi'
+		);
+		SocialSync_DB::update_jobs( $open, array( 'status' => 'failed', 'error' => $reason ) );
+		SocialSync_Logger::error( 'n8n.execution_failed.applied', 'Chuyển các lượt còn mở sang failed', $log + array( 'failed_jobs' => $open, 'closed' => $closed ) );
+
+		return self::reply( 200, array( 'ok' => true, 'failed_jobs' => $open, 'closed' => $closed ) );
 	}
 
 	/**

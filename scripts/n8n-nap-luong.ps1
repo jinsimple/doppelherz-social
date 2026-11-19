@@ -24,6 +24,8 @@ $secret = Read-EnvValue 'SOCIALSYNC_SECRET'
 Write-Step ("SOCIALSYNC_SECRET: {0} ky tu" -f $secret.Length)
 $fbToken = Read-EnvValue 'FB_PAGE_TOKEN' -Optional
 if ($fbToken) { Write-Step ("FB_PAGE_TOKEN: {0} ky tu" -f $fbToken.Length) } else { Write-Step 'FB_PAGE_TOKEN: chua co, bo qua credential Facebook' }
+$claudeKey = Read-EnvValue 'ANTHROPIC_API_KEY' -Optional
+if ($claudeKey) { Write-Step ("ANTHROPIC_API_KEY: {0} ky tu, bat dau bang {1}" -f $claudeKey.Length, $claudeKey.Substring(0, [Math]::Min(7, $claudeKey.Length))) } else { Write-Step 'ANTHROPIC_API_KEY: chua co. Buoc AI se bao loi va luong tu dung noi dung mau.' }
 
 # 2. Tao file credential tam trong n8n/ (container thay o /files), nap vao n8n, xoa file
 $tmp = Join-Path $root 'n8n\.tmp-credential.json'
@@ -43,6 +45,14 @@ if ($fbToken) {
     data = @{ name = 'Authorization'; value = "Bearer $fbToken" }
   }
 }
+# Luon tao credential Claude: n8n 2.x tu choi publish luong neu mot khoi tro toi credential khong ton tai.
+# Chua co key thi dung gia tri giu cho: Claude tra 401, khoi "AI: kiem tra va ap noi dung" dung noi dung mau va ghi ly do.
+$cred += @{
+  id   = 'SocSyncClaude001'
+  name = 'Claude - API key'
+  type = 'httpHeaderAuth'
+  data = @{ name = 'x-api-key'; value = $(if ($claudeKey) { $claudeKey } else { 'chua-cau-hinh-ANTHROPIC_API_KEY' }) }
+}
 try {
   $json = ConvertTo-Json -InputObject $cred -Depth 5
   [System.IO.File]::WriteAllText($tmp, $json, (New-Object System.Text.UTF8Encoding($false)))
@@ -54,7 +64,12 @@ finally {
   if (Test-Path $tmp) { Remove-Item $tmp -Force; Write-Step 'Da xoa file credential tam' }
 }
 
-# 3. Nap luong. Dia chi webhook Make (MAKE_PINTEREST_WEBHOOK) khong nam trong repo: chen vao ban sao tam
+# 3a. Nap luong bao loi (luong chinh tro toi no qua settings.errorWorkflow = SocialSyncError01)
+Write-Step 'Nap luong bao loi n8n/workflows/socialsync-error.json'
+docker exec shop-n8n-1 n8n import:workflow --input=/files/workflows/socialsync-error.json
+if ($LASTEXITCODE -ne 0) { throw "import:workflow (bao loi) loi, exit $LASTEXITCODE" }
+
+# 3b. Nap luong chinh. Dia chi webhook Make (MAKE_PINTEREST_WEBHOOK) khong nam trong repo: chen vao ban sao tam
 #    cua file luong thay cho chuoi giu cho __MAKE_PINTEREST_WEBHOOK__, nap ban sao, roi xoa.
 $makeHook = Read-EnvValue 'MAKE_PINTEREST_WEBHOOK' -Optional
 $wfSrc = Join-Path $root 'n8n\workflows\socialsync-main.json'
@@ -82,7 +97,10 @@ finally {
   if (Test-Path $wfTmp) { Remove-Item $wfTmp -Force; Write-Step 'Da xoa file luong tam' }
 }
 
-# 4. Publish
+# 4. Publish. Luong bao loi chi co Error Trigger: n8n co the khong can (hoac khong cho) publish, nen loi o day khong dung script.
+Write-Step 'Publish luong SocialSyncError01 (khong bat buoc)'
+docker exec shop-n8n-1 n8n publish:workflow --id=SocialSyncError01
+if ($LASTEXITCODE -ne 0) { Write-Step "Ghi chu: publish luong bao loi tra exit $LASTEXITCODE (Error Trigger thuong khong can publish)" }
 Write-Step 'Publish luong SocialSyncMain01'
 docker exec shop-n8n-1 n8n publish:workflow --id=SocialSyncMain01
 if ($LASTEXITCODE -ne 0) { throw "publish:workflow loi, exit $LASTEXITCODE" }

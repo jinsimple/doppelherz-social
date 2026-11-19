@@ -68,7 +68,7 @@ Chúng tôi đã dựng bản demo chạy thật trên website thử nghiệm ht
 | Chặn bài theo danh mục và thông báo đại lý dạng PDF; câu khuyến cáo do code gắn cho bài sản phẩm | Hai lớp duyệt cho nhóm nhạy cảm (hiện chỉ gắn cờ cảnh báo) |
 | **Duyệt trước khi đăng**: xem, sửa nội dung, chọn giờ, duyệt hoặc từ chối; chống hai người duyệt trùng | Dựng ảnh Pin dọc 2:3 |
 | Lịch đăng tự rải: khung giờ, số bài tối đa/ngày, khoảng cách tối thiểu; giờ chọn tay cho từng bài | Lịch nội dung trên Google Sheet; lượt truy cập theo UTM qua GA4 |
-| Facebook lên bài sau ~7 giây; Pinterest (qua Make.com) đúng giờ đặt, Pin công khai | Tương tác Facebook trong báo cáo: app cần thêm quyền `pages_read_user_content` |
+| Facebook lên bài sau ~7 giây; Pinterest (qua Make.com) đúng giờ đặt, Pin công khai | Báo cáo tuần đã đọc được tương tác Facebook; chưa đọc được số liệu Pin (cần API Pinterest riêng) |
 | Nhật ký, luồng báo lỗi, trang Báo cáo + báo cáo tuần do Claude tóm tắt; chạy thử trên bài thật của doppelherz.vn (không đăng) | Số liệu Pin (lượt xem, lưu): cần API Pinterest riêng |
 
 Ý nghĩa: hai rủi ro kỹ thuật lớn nhất (đăng Facebook bằng API và tạo Pin công khai) đã được gỡ, và quy trình người duyệt đã chạy được. Dự án thật tập trung vào phần **tuân thủ theo dữ liệu của khách** (sổ XNQC, bộ luật pháp chế) và **đưa lên website thật**.

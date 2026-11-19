@@ -215,7 +215,7 @@ flowchart TD
 | Duyệt | Một lớp, sửa được nội dung và giờ, chống duyệt trùng | Hai lớp cho nhóm nhạy cảm (hiện chỉ gắn cờ); nhắc việc duyệt qua email |
 | Ảnh Pinterest | Ảnh đại diện có sẵn | Ảnh dọc 1000×1500 theo 3 bố cục |
 | Lịch | Tự rải theo khung giờ, số bài/ngày, khoảng cách; giờ chọn tay | Lịch nội dung trên Google Sheet nếu khách cần |
-| Báo cáo | Trang Báo cáo + báo cáo tuần do Claude tóm tắt | Thêm GA4 (lượt truy cập theo UTM); tương tác Facebook cần app có quyền `pages_read_user_content`; số liệu Pin cần API Pinterest riêng |
+| Báo cáo | Trang Báo cáo + báo cáo tuần do Claude tóm tắt | Thêm GA4 (lượt truy cập theo UTM); số liệu Pin cần API Pinterest riêng (tương tác Facebook đã đọc được) |
 
 ## Nguồn
 - Code và luồng đang chạy: `plugin/social-sync/`, `n8n/workflows/socialsync-main.json`, `socialsync-error.json`, `socialsync-report.json` trong repo https://github.com/jinsimple/doppelherz-social

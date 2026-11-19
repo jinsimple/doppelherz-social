@@ -36,7 +36,7 @@ Hệ thống đang chạy thật. Anh/chị có thể tự đăng bài trên web
    - **Từ chối**: phải ghi lý do.
 4. **Xem kết quả.** Vào **SocialSync → Nhật ký đồng bộ**, tải lại sau 10–30 giây. Lượt chuyển *Đã đăng* kèm link mở bài trên Facebook hoặc Pin trên Pinterest.
 
-Hai bài **đã chờ sẵn** trong *Chờ duyệt*: một sản phẩm và một bài viết. Anh/chị có thể duyệt ngay mà không cần đăng bài mới.
+Một sản phẩm **đã chờ sẵn** trong *Chờ duyệt*. Anh/chị có thể duyệt ngay mà không cần đăng bài mới.
 
 ## 3. Những điều nên thử thêm
 
@@ -65,12 +65,12 @@ Hai bài **đã chờ sẵn** trong *Chờ duyệt*: một sản phẩm và mộ
 | n8n lỗi giữa chừng | Luồng báo lỗi đánh dấu *Lỗi* trong vòng 1 giây, ghi tên khối lỗi |
 | AI không dùng được | Tự dùng nội dung mẫu, ghi lý do (thử với API key sai: HTTP 401) |
 | Chi phí AI | 1 lần gọi/bài, đo được $0,027–0,052/bài |
+| Đọc tương tác Facebook | Báo cáo tuần đọc reaction, bình luận, chia sẻ của 4 bài đã đăng trong 1 lần gọi gộp, lưu vào từng lượt. Token Trang không hết hạn |
 
 ## 5. Giới hạn của bản demo
 
 - **Fanpage và Pinterest là tài khoản thử của ứng viên**, không phải tài khoản Doppelherz. Bài anh/chị duyệt sẽ hiện công khai trên các trang này.
 - **Chưa tra sổ xác nhận quảng cáo (XNQC)** cho bài sản phẩm, chưa có lớp AI rà soát tuân thủ thứ hai. Nhóm nhạy cảm (trẻ em, phụ nữ mang thai, nhân viên y tế) mới được gắn cờ cảnh báo, chưa có lớp duyệt pháp chế.
-- **Tương tác Facebook trong báo cáo chưa có số.** App Facebook cần thêm quyền `pages_read_user_content`; báo cáo ghi rõ lý do này.
 - **Pinterest đi qua Make.com.** App Pinterest API riêng đang chờ duyệt, nên chưa đọc được số liệu Pin.
 - **Ảnh Pin dùng thẳng ảnh đại diện của bài**, chưa dựng ảnh dọc 2:3 theo mẫu.
 - **Máy chủ đặt tại nhà ứng viên.** Nếu máy tắt hoặc mất mạng thì website và n8n tạm không truy cập được.

@@ -10,11 +10,20 @@ Set-Location $root
 
 function Write-Step($msg) { Write-Host ("[{0}] {1}" -f (Get-Date -Format 'HH:mm:ss.fff'), $msg) }
 
-# 1. Doc ma bi mat tu .env
-$line = Select-String -Path (Join-Path $root '.env') -Pattern '^SOCIALSYNC_SECRET=(.+)$' | Select-Object -First 1
-if (-not $line) { throw 'Khong thay SOCIALSYNC_SECRET trong file .env' }
-$secret = $line.Matches[0].Groups[1].Value.Trim()
-Write-Step ("Doc ma bi mat tu .env: {0} ky tu" -f $secret.Length)
+function Read-EnvValue($name, [switch]$Optional) {
+  $line = Select-String -Path (Join-Path $root '.env') -Pattern ("^{0}=(.+)$" -f $name) | Select-Object -First 1
+  if (-not $line) {
+    if ($Optional) { return $null }
+    throw "Khong thay $name trong file .env"
+  }
+  return $line.Matches[0].Groups[1].Value.Trim().Trim('"')
+}
+
+# 1. Doc ma bi mat va token tu .env (chi in do dai)
+$secret = Read-EnvValue 'SOCIALSYNC_SECRET'
+Write-Step ("SOCIALSYNC_SECRET: {0} ky tu" -f $secret.Length)
+$fbToken = Read-EnvValue 'FB_PAGE_TOKEN' -Optional
+if ($fbToken) { Write-Step ("FB_PAGE_TOKEN: {0} ky tu" -f $fbToken.Length) } else { Write-Step 'FB_PAGE_TOKEN: chua co, bo qua credential Facebook' }
 
 # 2. Tao file credential tam trong n8n/ (container thay o /files), nap vao n8n, xoa file
 $tmp = Join-Path $root 'n8n\.tmp-credential.json'
@@ -26,10 +35,18 @@ $cred = @(
     data = @{ name = 'X-SocialSync-Secret'; value = $secret }
   }
 )
+if ($fbToken) {
+  $cred += @{
+    id   = 'SocSyncFbPage001'
+    name = 'Facebook - token Trang Mint Shop'
+    type = 'httpHeaderAuth'
+    data = @{ name = 'Authorization'; value = "Bearer $fbToken" }
+  }
+}
 try {
   $json = ConvertTo-Json -InputObject $cred -Depth 5
   [System.IO.File]::WriteAllText($tmp, $json, (New-Object System.Text.UTF8Encoding($false)))
-  Write-Step 'Nap credential "SocialSync - ma bi mat tu WordPress"'
+  Write-Step ("Nap {0} credential vao n8n" -f $cred.Count)
   docker exec shop-n8n-1 n8n import:credentials --input=/files/.tmp-credential.json
   if ($LASTEXITCODE -ne 0) { throw "import:credentials loi, exit $LASTEXITCODE" }
 }

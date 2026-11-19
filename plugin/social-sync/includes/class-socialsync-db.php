@@ -17,6 +17,53 @@ final class SocialSync_DB {
 		return $wpdb->prefix . 'socialsync_jobs';
 	}
 
+	public static function previews_table(): string {
+		global $wpdb;
+		return $wpdb->prefix . 'socialsync_previews';
+	}
+
+	/**
+	 * Chuyển trạng thái có điều kiện: chỉ đổi khi lượt đang ở đúng trạng thái mong đợi.
+	 * Dùng cho nút Duyệt / Từ chối để hai người (hoặc hai lần bấm) không cùng duyệt một lượt.
+	 *
+	 * @param array<string, mixed> $fields
+	 * @return bool true nếu đã đổi (đúng 1 dòng).
+	 */
+	public static function transition( int $job_id, string $from, array $fields ): bool {
+		global $wpdb;
+		$fields['updated_at'] = self::now();
+		$sets                 = array();
+		$values               = array();
+		foreach ( $fields as $column => $value ) {
+			if ( ! preg_match( '/^[a-z_]+$/', (string) $column ) ) {
+				continue;
+			}
+			if ( null === $value ) {
+				$sets[] = "`{$column}` = NULL";
+				continue;
+			}
+			$sets[]   = "`{$column}` = " . ( is_int( $value ) ? '%d' : '%s' );
+			$values[] = is_scalar( $value ) ? $value : wp_json_encode( $value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+		}
+		$sql  = 'UPDATE ' . self::table() . ' SET ' . implode( ', ', $sets ) . ' WHERE id = %d AND status = %s';
+		$rows = $wpdb->query( $wpdb->prepare( $sql, array_merge( $values, array( $job_id, $from ) ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$ok   = 1 === (int) $rows;
+		SocialSync_Logger::write(
+			$ok ? 'info' : 'warn',
+			'db.transition',
+			$ok ? "Chuyển lượt từ {$from}" : "Không chuyển được lượt: lượt không còn ở trạng thái {$from}",
+			array(
+				'job_id'   => $job_id,
+				'from'     => $from,
+				'to'       => $fields['status'] ?? null,
+				'fields'   => array_keys( $fields ),
+				'rows'     => $rows,
+				'db_error' => false === $rows ? $wpdb->last_error : null,
+			)
+		);
+		return $ok;
+	}
+
 	public static function install(): void {
 		global $wpdb;
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -44,14 +91,43 @@ final class SocialSync_DB {
   visibility varchar(20) NULL,
   error text NULL,
   execution_id varchar(64) NULL,
+  classification varchar(2) NULL,
+  reviewed_by bigint(20) unsigned NULL,
+  reviewed_at datetime NULL,
+  review_note text NULL,
+  metrics longtext NULL,
+  metrics_at datetime NULL,
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,
   PRIMARY KEY  (id),
   UNIQUE KEY post_channel (post_id,channel),
-  KEY status (status)
+  KEY status (status),
+  KEY channel_sched (channel,scheduled_at)
 ) {$charset};";
 
-		$result = dbDelta( $sql );
+		// Kết quả "Chạy thử với bài thật của doppelherz.vn": AI viết + kiểm tra, KHÔNG đăng.
+		$previews = self::previews_table();
+		$sql2     = "CREATE TABLE {$previews} (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  batch_id varchar(32) NOT NULL,
+  source_id bigint(20) unsigned NULL,
+  source_url text NULL,
+  title text NULL,
+  categories text NULL,
+  status varchar(20) NOT NULL DEFAULT 'pending',
+  classification varchar(2) NULL,
+  result longtext NULL,
+  error text NULL,
+  tokens_in int(10) unsigned NULL,
+  tokens_out int(10) unsigned NULL,
+  ai_ms int(10) unsigned NULL,
+  created_at datetime NOT NULL,
+  updated_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  KEY batch_id (batch_id)
+) {$charset};";
+
+		$result = array_merge( dbDelta( $sql ), dbDelta( $sql2 ) );
 		$exists = self::table_exists();
 		update_option( 'socialsync_db_version', SOCIALSYNC_DB_VERSION, false );
 

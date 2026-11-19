@@ -1,0 +1,497 @@
+{
+  "id": "SocialSyncReport01",
+  "name": "SocialSync - Báo cáo tuần",
+  "active": false,
+  "nodes": [
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a01",
+      "name": "Mỗi sáng thứ Hai 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -100
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a02",
+      "name": "Nhận yêu cầu tạo báo cáo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        100
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "socialsync/report",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SocSyncSecret001",
+          "name": "SocialSync - mã bí mật từ WordPress"
+        }
+      },
+      "webhookId": "5c8e0a2b-3d4f-4e5a-9b6c-8d9e0f1a2b3c"
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a03",
+      "name": "Chuẩn bị",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Chạy theo lịch (7 ngày) hoặc theo nút bấm trên WordPress (7 hoặc 30 ngày).\nconst j = $input.first().json;\nconst days = [7, 30].includes(Number(j.body?.days)) ? Number(j.body.days) : 7;\nconst source = j.body ? 'nút bấm trên WordPress' : 'lịch thứ Hai 08:00';\nconsole.log('[socialsync] Bắt đầu báo cáo', JSON.stringify({ days, source, request_id: j.body?.request_id ?? null }));\nreturn [{ json: { days, source, request_id: j.body?.request_id ?? null } }];\n"
+      }
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a04",
+      "name": "Lấy số liệu từ WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'http://wordpress/wp-json/social-sync/v1/report?days=' + $json.days }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SocSyncSecret001",
+          "name": "SocialSync - mã bí mật từ WordPress"
+        }
+      }
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a05",
+      "name": "Chuẩn bị đọc tương tác",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Gom mã bài Facebook để đọc tương tác bằng MỘT lần gọi Graph API (?ids=...), tiết kiệm hạn mức app.\nconst r = $input.first().json;\nif (r.statusCode !== 200 || !r.body || r.body.ok !== true) {\n  throw new Error(`Không lấy được số liệu từ WordPress: HTTP ${r.statusCode} ${JSON.stringify(r.body).slice(0, 300)}`);\n}\nconst posts = r.body.facebook_posts ?? [];\nconsole.log('[socialsync] Số bài Facebook cần đọc tương tác', posts.length);\nreturn [{ json: { has_posts: posts.length > 0, ids: posts.map(p => p.remote_id).join(','), posts } }];\n"
+      }
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a06",
+      "name": "Có bài Facebook?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b",
+              "leftValue": "={{ $json.has_posts }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a07",
+      "name": "Facebook: đọc tương tác",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        -120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "batch",
+              "value": "={{ JSON.stringify($json.posts.map(p => ({ method: 'GET', relative_url: p.remote_id + '?fields=reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0),shares' }))) }}"
+            },
+            {
+              "name": "include_headers",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SocSyncFbPage001",
+          "name": "Facebook - token Trang Mint Shop"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a08",
+      "name": "Facebook: tính tương tác",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        -120
+      ],
+      "parameters": {
+        "jsCode": "// Graph Batch API: một request, mỗi bài một kết quả {code, body}. (Tham số ?ids= bị Facebook bỏ từ v26.)\nconst r = $input.first().json;\nconst posts = $('Chuẩn bị đọc tương tác').first().json.posts;\nconst headers = r.headers ?? {};\nif (r.statusCode !== 200 || !Array.isArray(r.body)) {\n  console.log('[socialsync] Facebook batch lỗi', JSON.stringify({ status: r.statusCode ?? null, body: r.body ?? null, error: r.error?.message ?? null }));\n  return [{ json: { ok: false, items: [], error: `Facebook HTTP ${r.statusCode}: ${JSON.stringify(r.body?.error ?? r.body ?? r.error).slice(0, 300)}`, usage: headers['x-app-usage'] ?? null } }];\n}\nconst items = [];\nconst errors = [];\nr.body.forEach((res, i) => {\n  const p = posts[i];\n  let b = {};\n  try { b = JSON.parse(res?.body ?? '{}'); } catch (e) { /* giữ rỗng */ }\n  if (res?.code !== 200) { errors.push(b.error?.message ?? `HTTP ${res?.code}`); return; }\n  items.push({ job_id: p.job_id, title: p.title, metrics: {\n    reactions: b.reactions?.summary?.total_count ?? 0,\n    comments: b.comments?.summary?.total_count ?? 0,\n    shares: b.shares?.count ?? 0,\n  } });\n});\nconst needPerm = errors.some(e => /pages_read_user_content/.test(e));\nconst error = errors.length ? `${errors.length}/${posts.length} bài không đọc được tương tác${needPerm ? ': app Facebook cần thêm quyền pages_read_user_content' : ': ' + errors[0]}` : null;\nconsole.log('[socialsync] Tương tác Facebook', JSON.stringify({ ok_items: items.length, errors: errors.length, need_permission: needPerm, usage: headers['x-app-usage'] ?? null }));\nreturn [{ json: { ok: errors.length === 0, items, error, usage: headers['x-app-usage'] ?? null } }];\n"
+      }
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a09",
+      "name": "Lưu tương tác vào WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1820,
+        -120
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://wordpress/wp-json/social-sync/v1/metrics",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ items: $json.items }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SocSyncSecret001",
+          "name": "SocialSync - mã bí mật từ WordPress"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a10",
+      "name": "Dựng yêu cầu tóm tắt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Gom số liệu + tương tác, dựng yêu cầu cho Claude viết báo cáo ngắn cho trưởng phòng Marketing.\nconst prep = $('Chuẩn bị').first().json;\nconst stats = $('Lấy số liệu từ WordPress').first().json.body;\nlet fb = { ok: false, items: [], error: 'Không có bài Facebook trong kỳ' };\ntry { fb = $('Facebook: tính tương tác').first().json; } catch (e) { /* nhánh không có bài Facebook */ }\nconst top = [...(fb.items ?? [])].sort((a, b) => (b.metrics.reactions + b.metrics.comments + b.metrics.shares) - (a.metrics.reactions + a.metrics.comments + a.metrics.shares)).slice(0, 5);\nconst data = {\n  so_ngay: prep.days,\n  tong_luot: stats.jobs,\n  theo_kenh: Object.values(stats.channels).map(c => ({ kenh: c.label, tong: c.total, da_dang: c.published, loi: c.failed, ti_le_thanh_cong: c.success_rate, tb_phut_tu_xuat_ban_toi_len_kenh: c.avg_lead_min, trang_thai_khac: c.by_status })),\n  phan_loai: stats.classification,\n  nguon_noi_dung: stats.content_source,\n  ai: stats.ai,\n  bai_tuong_tac_cao_nhat_facebook: top.map(t => ({ tieu_de: t.title, ...t.metrics })),\n  ghi_chu: fb.ok ? null : fb.error,\n};\nconst SYSTEM = [\n  'Viết báo cáo tuần ngắn (tối đa 200 từ, tiếng Việt) cho trưởng phòng Marketing về hệ thống tự động đồng bộ nội dung website lên Facebook và Pinterest.',\n  'Chỉ dùng số trong dữ liệu. Không suy diễn nguyên nhân khi dữ liệu không cho biết. Không dùng markdown, chỉ văn bản thường với gạch đầu dòng \"-\".',\n  'Cấu trúc: 1) Kết quả chính (số bài, tỉ lệ thành công từng kênh). 2) Lỗi và việc chờ xử lý (chờ duyệt, lỗi). 3) Bài có tương tác cao nhất. 4) Việc cần người quyết định (nếu có).',\n].join('\\n');\nconst request_body = {\n  model: 'claude-opus-5-5',\n  max_tokens: 4000,\n  fallbacks: 'default',\n  output_config: { effort: 'low' },\n  system: SYSTEM,\n  messages: [{ role: 'user', content: 'Số liệu (JSON):\\n' + JSON.stringify(data, null, 2) }],\n};\nconsole.log('[socialsync] Gửi Claude tóm tắt báo cáo', JSON.stringify({ days: prep.days, jobs: stats.jobs, top: top.length }));\nreturn [{ json: { request_body, data, started_ms: Date.now() } }];\n"
+      }
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a11",
+      "name": "Claude: tóm tắt báo cáo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2340,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2026-10-21"
+            },
+            {
+              "name": "anthropic-beta",
+              "value": "server-side-fallback-2026-07-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.request_body) }}",
+        "options": {
+          "timeout": 90000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SocSyncClaude001",
+          "name": "Claude - API key"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a12",
+      "name": "Đọc tóm tắt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Claude lỗi thì vẫn lưu báo cáo dạng số liệu thô, kèm lý do.\nconst r = $input.first().json;\nconst prep = $('Dựng yêu cầu tóm tắt').first().json;\nconst d = prep.data;\nlet body = r.body;\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { /* giữ chuỗi */ } }\nconst text = r.statusCode === 200 && body && body.stop_reason === 'end_turn' ? (body.content ?? []).filter(b => b.type === 'text').map(b => b.text).join('').trim() : '';\nlet out;\nif (text) {\n  out = { summary: text, source: 'ai', model: body.model, error: null };\n} else {\n  const lines = [`Báo cáo ${d.so_ngay} ngày (số liệu thô):`];\n  for (const k of d.theo_kenh) lines.push(`- ${k.kenh}: ${k.da_dang} đã đăng, ${k.loi} lỗi, tỉ lệ thành công ${k.ti_le_thanh_cong ?? '—'}%`);\n  lines.push(`- Lần gọi AI: ${d.ai.calls}, chi phí ước tính $${d.ai.usd_estimate}`);\n  out = { summary: lines.join('\\n'), source: 'raw', model: null, error: `Claude không tóm tắt được: HTTP ${r.statusCode ?? '—'} ${JSON.stringify(body?.error ?? r.error?.message ?? body?.stop_reason ?? '').slice(0, 300)}` };\n}\nconsole.log('[socialsync] Báo cáo', JSON.stringify({ source: out.source, chars: out.summary.length, ms: Date.now() - prep.started_ms, usage: body?.usage ?? null }));\nreturn [{ json: { ...out, days: d.so_ngay, execution_id: $execution.id } }];\n"
+      }
+    },
+    {
+      "id": "8e2f4a6c-0b1d-4e3f-9a5b-7c9d1e3f5a13",
+      "name": "Lưu báo cáo vào WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2860,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://wordpress/wp-json/social-sync/v1/reports",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SocSyncSecret001",
+          "name": "SocialSync - mã bí mật từ WordPress"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Mỗi sáng thứ Hai 08:00": {
+      "main": [
+        [
+          {
+            "node": "Chuẩn bị",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nhận yêu cầu tạo báo cáo": {
+      "main": [
+        [
+          {
+            "node": "Chuẩn bị",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chuẩn bị": {
+      "main": [
+        [
+          {
+            "node": "Lấy số liệu từ WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lấy số liệu từ WordPress": {
+      "main": [
+        [
+          {
+            "node": "Chuẩn bị đọc tương tác",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chuẩn bị đọc tương tác": {
+      "main": [
+        [
+          {
+            "node": "Có bài Facebook?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Có bài Facebook?": {
+      "main": [
+        [
+          {
+            "node": "Facebook: đọc tương tác",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dựng yêu cầu tóm tắt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook: đọc tương tác": {
+      "main": [
+        [
+          {
+            "node": "Facebook: tính tương tác",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook: tính tương tác": {
+      "main": [
+        [
+          {
+            "node": "Lưu tương tác vào WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lưu tương tác vào WordPress": {
+      "main": [
+        [
+          {
+            "node": "Dựng yêu cầu tóm tắt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dựng yêu cầu tóm tắt": {
+      "main": [
+        [
+          {
+            "node": "Claude: tóm tắt báo cáo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: tóm tắt báo cáo": {
+      "main": [
+        [
+          {
+            "node": "Đọc tóm tắt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Đọc tóm tắt": {
+      "main": [
+        [
+          {
+            "node": "Lưu báo cáo vào WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  "pinData": {},
+  "tags": []
+}

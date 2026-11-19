@@ -19,6 +19,11 @@ final class SocialSync_Admin {
 	public static function menu(): void {
 		add_menu_page( 'SocialSync', 'SocialSync', SocialSync_Log_Page::CAP, SocialSync_Log_Page::SLUG, array( 'SocialSync_Log_Page', 'render' ), 'dashicons-share', 58 );
 		add_submenu_page( SocialSync_Log_Page::SLUG, 'Nhật ký đồng bộ', 'Nhật ký đồng bộ', SocialSync_Log_Page::CAP, SocialSync_Log_Page::SLUG, array( 'SocialSync_Log_Page', 'render' ) );
+		$waiting = SocialSync_Review::pending_count();
+		$bubble  = $waiting ? ' <span class="awaiting-mod">' . (int) $waiting . '</span>' : '';
+		add_submenu_page( SocialSync_Log_Page::SLUG, 'Chờ duyệt', 'Chờ duyệt' . $bubble, SocialSync_Log_Page::CAP, SocialSync_Review::SLUG, array( 'SocialSync_Review', 'render' ) );
+		add_submenu_page( SocialSync_Log_Page::SLUG, 'Báo cáo đồng bộ', 'Báo cáo', SocialSync_Log_Page::CAP, SocialSync_Report::SLUG, array( 'SocialSync_Report', 'render' ) );
+		add_submenu_page( SocialSync_Log_Page::SLUG, 'Chạy thử với bài thật', 'Chạy thử doppelherz.vn', SocialSync_Log_Page::CAP, SocialSync_Preview::SLUG, array( 'SocialSync_Preview', 'render' ) );
 		add_submenu_page( SocialSync_Log_Page::SLUG, 'Cấu hình SocialSync', 'Cấu hình', 'manage_options', self::PAGE, array( __CLASS__, 'render' ) );
 	}
 
@@ -155,6 +160,59 @@ final class SocialSync_Admin {
 						<td>
 							<input id="ss-n8n-editor" type="url" class="regular-text code" name="<?php echo esc_attr( SocialSync_Settings::OPTION ); ?>[n8n_editor]" value="<?php echo esc_attr( (string) $s['n8n_editor'] ); ?>">
 							<p class="description">Dùng để tạo link tới từng lượt chạy n8n trong trang Nhật ký.</p>
+						</td>
+					</tr>
+					<?php $o = esc_attr( SocialSync_Settings::OPTION ); ?>
+					<tr>
+						<th scope="row">Duyệt trước khi đăng</th>
+						<td>
+							<label style="margin-right:16px"><input type="radio" name="<?php echo $o; ?>[approval]" value="required" <?php checked( SocialSync_Settings::approval_required() ); ?>> Bắt buộc duyệt (khuyến nghị cho thực phẩm bảo vệ sức khỏe)</label>
+							<label><input type="radio" name="<?php echo $o; ?>[approval]" value="auto" <?php checked( ! SocialSync_Settings::approval_required() ); ?>> Tự đăng theo lịch</label>
+							<p class="description">Bắt buộc duyệt: AI viết xong, lượt nằm ở SocialSync → Chờ duyệt cho tới khi có người duyệt.</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">Lịch đăng tự rải</th>
+						<td>
+							<p>Chỉ đăng trong khung giờ <input type="time" name="<?php echo $o; ?>[window_start]" value="<?php echo esc_attr( (string) $s['window_start'] ); ?>"> – <input type="time" name="<?php echo $o; ?>[window_end]" value="<?php echo esc_attr( (string) $s['window_end'] ); ?>"> (giờ website)</p>
+							<p>Tối đa mỗi ngày:
+								<?php foreach ( SocialSync_Settings::CHANNELS as $channel => $label ) : ?>
+									<?php echo esc_html( $label ); ?> <input type="number" min="1" max="100" style="width:70px" name="<?php echo $o; ?>[max_per_day][<?php echo esc_attr( $channel ); ?>]" value="<?php echo (int) SocialSync_Settings::max_per_day( $channel ); ?>"> bài &nbsp;
+								<?php endforeach; ?>
+							</p>
+							<p>Hai bài cùng kênh cách nhau ít nhất <input type="number" min="0" max="1440" style="width:80px" name="<?php echo $o; ?>[min_gap]" value="<?php echo (int) SocialSync_Settings::min_gap(); ?>"> phút</p>
+							<p class="description">Người viết vẫn chọn được giờ riêng cho từng bài trong ô "Lịch đăng mạng xã hội" ở màn hình viết bài.</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="ss-blocked">Không đồng bộ</label></th>
+						<td>
+							<input id="ss-blocked" type="text" class="large-text" name="<?php echo $o; ?>[blocked_categories]" value="<?php echo esc_attr( (string) $s['blocked_categories'] ); ?>">
+							<p class="description">Tên danh mục, phân cách bằng dấu phẩy. Bài thuộc các danh mục này được ghi "Bỏ qua" và không gửi sang AI.</p>
+							<label><input type="checkbox" name="<?php echo $o; ?>[block_pdf_title]" value="1" <?php checked( ! empty( $s['block_pdf_title'] ) ); ?>> Chặn bài có tiêu đề là tên file PDF (thông báo đại lý)</label>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="ss-disclaimer">Câu khuyến cáo cho bài sản phẩm</label></th>
+						<td>
+							<input id="ss-disclaimer" type="text" class="large-text" name="<?php echo $o; ?>[product_disclaimer]" value="<?php echo esc_attr( (string) $s['product_disclaimer'] ); ?>">
+							<p class="description">Hệ thống tự gắn thành dòng riêng cuối bài khi AI phân loại bài là Sản phẩm. AI không tự viết câu này.</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="ss-board-map">Board Pinterest</label></th>
+						<td>
+							<p>Board mặc định <input type="text" name="<?php echo $o; ?>[default_board]" value="<?php echo esc_attr( (string) $s['default_board'] ); ?>" class="regular-text"></p>
+							<textarea id="ss-board-map" name="<?php echo $o; ?>[board_map]" rows="4" class="large-text code" placeholder="Làm đẹp = Da, Tóc & Móng&#10;Sức khỏe trẻ em = Mẹ & Bé"><?php echo esc_textarea( (string) $s['board_map'] ); ?></textarea>
+							<p class="description">Mỗi dòng: Tên danh mục = Tên board. Tên board được gửi sang Make trong trường <code>board</code>.</p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row">Webhook n8n khác</th>
+						<td>
+							<p>Lệnh đăng sau khi duyệt <input type="url" class="regular-text code" name="<?php echo $o; ?>[approve_url]" value="<?php echo esc_attr( (string) $s['approve_url'] ); ?>"></p>
+							<p>Tạo báo cáo <input type="url" class="regular-text code" name="<?php echo $o; ?>[report_url]" value="<?php echo esc_attr( (string) $s['report_url'] ); ?>"></p>
+							<p>Website nguồn cho trang Chạy thử <input type="url" class="regular-text code" name="<?php echo $o; ?>[preview_source]" value="<?php echo esc_attr( (string) $s['preview_source'] ); ?>"></p>
 						</td>
 					</tr>
 					<tr>

@@ -37,7 +37,7 @@
         0
       ],
       "parameters": {
-        "jsCode": "// Kiểm tra dữ liệu WordPress gửi sang và chuẩn bị câu trả lời.\n// Mọi tín hiệu kiểm tra được giữ lại trong output để xem ở tab Executions.\nconst receivedAt = new Date().toISOString();\nconst input = $input.first().json;\nconst body = input.body ?? {};\nconst headers = input.headers ?? {};\nconst executionId = $execution.id;\nconst requestId = body.request_id ?? headers['x-socialsync-request-id'] ?? null;\n\nconst trace = {\n  received_at: receivedAt,\n  request_id: requestId,\n  plugin_version: headers['x-socialsync-version'] ?? null,\n  content_type: headers['content-type'] ?? null,\n  event: body.event ?? null,\n};\n\nif (body.event === 'test') {\n  return [{ json: {\n    http_status: 200,\n    response: { ok: true, test: true, execution_id: executionId, request_id: requestId, received_at: receivedAt },\n    trace,\n    data: body,\n  } }];\n}\n\nconst problems = [];\nconst need = (cond, msg) => { if (!cond) problems.push(msg); };\nconst jobs = Array.isArray(body.jobs) ? body.jobs : [];\n\nneed(body.event === 'post_published', `event không hợp lệ: ${JSON.stringify(body.event)}`);\nneed(Number.isInteger(body.post_id) && body.post_id > 0, 'thiếu hoặc sai post_id');\nneed(['post', 'product'].includes(body.post_type), `post_type không hỗ trợ: ${JSON.stringify(body.post_type)}`);\nneed(typeof body.title === 'string' && body.title.trim() !== '', 'thiếu title');\nneed(typeof body.source_url === 'string' && /^https?:\\/\\//.test(body.source_url), 'thiếu hoặc sai source_url');\nneed(typeof body.callback_url === 'string' && /^https?:\\/\\//.test(body.callback_url), 'thiếu hoặc sai callback_url');\nneed(jobs.length > 0, 'không có lượt đồng bộ nào (jobs rỗng)');\nfor (const j of jobs) {\n  need(Number.isInteger(j.job_id) && j.job_id > 0, `lượt thiếu job_id: ${JSON.stringify(j)}`);\n  need(['facebook', 'pinterest'].includes(j.channel), `kênh không hỗ trợ: ${JSON.stringify(j.channel)}`);\n}\n\nconst signals = {\n  post_type: body.post_type ?? null,\n  channels: jobs.map(j => j.channel),\n  delays_minutes: Object.fromEntries(jobs.map(j => [j.channel, j.delay_minutes ?? 0])),\n  has_image: Boolean(body.image_url),\n  image_size: body.image ? `${body.image.width}x${body.image.height}` : null,\n  title_chars: (body.title ?? '').length,\n  content_chars: (body.content_text ?? '').length,\n  excerpt_chars: (body.excerpt ?? '').length,\n  categories: body.categories ?? [],\n  has_price: Boolean(body.price && body.price.price),\n  pinterest_will_skip: jobs.some(j => j.channel === 'pinterest') && !body.image_url,\n};\n\nif (problems.length) {\n  return [{ json: {\n    http_status: 422,\n    response: { ok: false, execution_id: executionId, request_id: requestId, error: problems.join('; ') },\n    problems,\n    signals,\n    trace,\n    data: body,\n  } }];\n}\n\nreturn [{ json: {\n  http_status: 202,\n  response: {\n    ok: true,\n    execution_id: executionId,\n    request_id: requestId,\n    received_at: receivedAt,\n    accepted_jobs: jobs.map(j => j.job_id),\n  },\n  signals,\n  trace,\n  data: body,\n} }];\n"
+        "jsCode": "// Kiểm tra dữ liệu WordPress gửi sang và chuẩn bị câu trả lời.\n// Mọi tín hiệu kiểm tra được giữ lại trong output để xem ở tab Executions.\nconst receivedAt = new Date().toISOString();\nconst input = $input.first().json;\nconst body = input.body ?? {};\nconst headers = input.headers ?? {};\nconst executionId = $execution.id;\nconst requestId = body.request_id ?? headers['x-socialsync-request-id'] ?? null;\n\nconst trace = {\n  received_at: receivedAt,\n  request_id: requestId,\n  plugin_version: headers['x-socialsync-version'] ?? null,\n  content_type: headers['content-type'] ?? null,\n  event: body.event ?? null,\n};\n\nif (body.event === 'test') {\n  return [{ json: {\n    http_status: 200,\n    response: { ok: true, test: true, execution_id: executionId, request_id: requestId, received_at: receivedAt },\n    trace,\n    data: body,\n  } }];\n}\n\nconst problems = [];\nconst need = (cond, msg) => { if (!cond) problems.push(msg); };\nconst jobs = Array.isArray(body.jobs) ? body.jobs : [];\n\nneed(body.event === 'post_published', `event không hợp lệ: ${JSON.stringify(body.event)}`);\nneed(Number.isInteger(body.post_id) && body.post_id > 0, 'thiếu hoặc sai post_id');\nneed(['post', 'product'].includes(body.post_type), `post_type không hỗ trợ: ${JSON.stringify(body.post_type)}`);\nneed(typeof body.title === 'string' && body.title.trim() !== '', 'thiếu title');\nneed(typeof body.source_url === 'string' && /^https?:\\/\\//.test(body.source_url), 'thiếu hoặc sai source_url');\nneed(typeof body.callback_url === 'string' && /^https?:\\/\\//.test(body.callback_url), 'thiếu hoặc sai callback_url');\nneed(jobs.length > 0, 'không có lượt đồng bộ nào (jobs rỗng)');\nfor (const j of jobs) {\n  need(Number.isInteger(j.job_id) && (j.job_id > 0 || body.dry_run === true), `lượt thiếu job_id: ${JSON.stringify(j)}`);\n  need(['facebook', 'pinterest'].includes(j.channel), `kênh không hỗ trợ: ${JSON.stringify(j.channel)}`);\n}\n\nconst signals = {\n  post_type: body.post_type ?? null,\n  channels: jobs.map(j => j.channel),\n  delays_minutes: Object.fromEntries(jobs.map(j => [j.channel, j.delay_minutes ?? 0])),\n  has_image: Boolean(body.image_url),\n  image_size: body.image ? `${body.image.width}x${body.image.height}` : null,\n  title_chars: (body.title ?? '').length,\n  content_chars: (body.content_text ?? '').length,\n  excerpt_chars: (body.excerpt ?? '').length,\n  categories: body.categories ?? [],\n  has_price: Boolean(body.price && body.price.price),\n  pinterest_will_skip: jobs.some(j => j.channel === 'pinterest') && !body.image_url,\n  dry_run: body.dry_run === true,\n  approval_required: body.approval_required === true,\n  planned: Object.fromEntries(jobs.map(j => [j.channel, j.scheduled_at ?? null])),\n};\n\nif (problems.length) {\n  return [{ json: {\n    http_status: 422,\n    response: { ok: false, execution_id: executionId, request_id: requestId, error: problems.join('; ') },\n    problems,\n    signals,\n    trace,\n    data: body,\n  } }];\n}\n\nreturn [{ json: {\n  http_status: 202,\n  response: {\n    ok: true,\n    execution_id: executionId,\n    request_id: requestId,\n    received_at: receivedAt,\n    accepted_jobs: jobs.map(j => j.job_id),\n  },\n  signals,\n  trace,\n  data: body,\n} }];\n"
       }
     },
     {
@@ -67,7 +67,7 @@
         0
       ],
       "parameters": {
-        "jsCode": "// Nấc 3: tách mỗi lượt (kênh) thành một item và dựng nội dung theo MẪU CỐ ĐỊNH (chưa dùng AI).\n// Chỉ chạy tiếp khi bước kiểm tra đã nhận bài (HTTP 202). Gói test hoặc dữ liệu lỗi dừng ở đây.\nconst CONFIG = {\n  fb_page_id: '273106486233478',   // Fanpage Mint Shop - facebook.com/myphamcuatrang (ID công khai, không phải bí mật)\n  graph_version: 'v21.0',\n  utm_campaign: 'socialsync',\n  fb_summary_max: 400,\n  pin_title_max: 100,\n  pin_description_max: 400,\n};\n\nconst checked = $('Kiểm tra dữ liệu').first().json;\nif (checked.http_status !== 202) {\n  return [];\n}\nconst d = checked.data;\n\n// Lỗi giả lập CÓ CHỦ Ý để kiểm tra luồng \"SocialSync - Báo lỗi\": chỉ xảy ra khi tiêu đề chứa đúng chuỗi dưới.\nif (String(d.title ?? '').includes('[socialsync-thu-loi]')) {\n  throw new Error('Lỗi giả lập để kiểm tra luồng báo lỗi (tiêu đề chứa [socialsync-thu-loi])');\n}\n\n// Môi trường Code của n8n 2.x không có đối tượng URL (đo 2026-11-19: ReferenceError: URL is not defined),\n// nên gắn tham số UTM bằng xử lý chuỗi.\nconst withUtm = (url, source) => {\n  const hashAt = url.indexOf('#');\n  const base = hashAt === -1 ? url : url.slice(0, hashAt);\n  const hash = hashAt === -1 ? '' : url.slice(hashAt);\n  const utm = `utm_source=${encodeURIComponent(source)}&utm_medium=social&utm_campaign=${encodeURIComponent(CONFIG.utm_campaign)}`;\n  return base + (base.includes('?') ? '&' : '?') + utm + hash;\n};\n\n// Cắt ở ranh giới câu nếu được, nếu không thì ở ranh giới từ. Không cắt giữa từ.\nconst clip = (text, max) => {\n  const t = String(text ?? '').replace(/\\s+/g, ' ').trim();\n  if (t.length <= max) return t;\n  const cut = t.slice(0, max);\n  const sentenceEnd = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));\n  if (sentenceEnd > max * 0.5) return cut.slice(0, sentenceEnd + 1);\n  return cut.slice(0, Math.max(cut.lastIndexOf(' '), 1)) + '…';\n};\n\nconst summary = clip(d.excerpt || d.content_text, CONFIG.fb_summary_max);\nconst priceLine = d.price && d.price.price_text ? `Giá: ${d.price.price_text}` : null;\nconst now = Date.now();\n\nconst items = d.jobs.map(job => {\n  const link = withUtm(d.source_url, job.channel);\n  let content;\n  let facebook = null;\n\n  if (job.channel === 'facebook') {\n    const message = [d.title, summary, priceLine, `👉 Xem chi tiết: ${link}`].filter(Boolean).join('\\n\\n');\n    content = { kind: d.image_url ? 'photo' : 'link', message, link, image_url: d.image_url || null };\n    facebook = d.image_url\n      ? { url: `https://graph.facebook.com/${CONFIG.graph_version}/${CONFIG.fb_page_id}/photos`, body: { url: d.image_url, caption: message, published: true } }\n      : { url: `https://graph.facebook.com/${CONFIG.graph_version}/${CONFIG.fb_page_id}/feed`, body: { message, link } };\n  } else {\n    content = {\n      title: clip(d.title, CONFIG.pin_title_max),\n      description: clip([summary, priceLine].filter(Boolean).join(' '), CONFIG.pin_description_max),\n      alt_text: d.image_alt || d.title,\n      link,\n      image_url: d.image_url || null,\n    };\n  }\n\n  const delaySeconds = Math.max(0, Math.round(Number(job.delay_minutes ?? 0) * 60));\n  return {\n    json: {\n      job_id: job.job_id,\n      channel: job.channel,\n      post_id: d.post_id,\n      post_type: d.post_type,\n      title: d.title,\n      request_id: d.request_id ?? null,\n      has_image: Boolean(d.image_url),\n      delay_seconds: delaySeconds,\n      scheduled_at: new Date(now + delaySeconds * 1000).toISOString(),\n      callback_job_url: `${d.callback_url}/${job.job_id}`,\n      content_source: 'template',\n      content_source_reason: 'Chưa bật AI, dùng mẫu cố định',\n      content,\n      facebook,\n    },\n  };\n});\n\n// Xếp lượt theo giờ đăng tăng dần. Vòng lặp phía sau xử lý lần lượt từng lượt và chờ tới đúng giờ\n// của lượt đó, nên mỗi kênh đăng theo số phút trễ riêng của nó.\nitems.sort((a, b) => a.json.delay_seconds - b.json.delay_seconds);\nconsole.log('[socialsync] Thứ tự đăng', JSON.stringify(items.map(i => ({ job_id: i.json.job_id, channel: i.json.channel, delay_seconds: i.json.delay_seconds, scheduled_at: i.json.scheduled_at }))));\nreturn items;\n"
+        "jsCode": "// Nấc 3: tách mỗi lượt (kênh) thành một item và dựng nội dung theo MẪU CỐ ĐỊNH (chưa dùng AI).\n// Chỉ chạy tiếp khi bước kiểm tra đã nhận bài (HTTP 202). Gói test hoặc dữ liệu lỗi dừng ở đây.\nconst CONFIG = {\n  fb_page_id: '273106486233478',   // Fanpage Mint Shop - facebook.com/myphamcuatrang (ID công khai, không phải bí mật)\n  graph_version: 'v21.0',\n  utm_campaign: 'socialsync',\n  fb_summary_max: 400,\n  pin_title_max: 100,\n  pin_description_max: 400,\n};\n\nconst checked = $('Kiểm tra dữ liệu').first().json;\nif (checked.http_status !== 202) {\n  return [];\n}\nconst d = checked.data;\n\n// Lỗi giả lập CÓ CHỦ Ý để kiểm tra luồng \"SocialSync - Báo lỗi\": chỉ xảy ra khi tiêu đề chứa đúng chuỗi dưới.\nif (String(d.title ?? '').includes('[socialsync-thu-loi]')) {\n  throw new Error('Lỗi giả lập để kiểm tra luồng báo lỗi (tiêu đề chứa [socialsync-thu-loi])');\n}\n\n// Môi trường Code của n8n 2.x không có đối tượng URL (đo 2026-11-19: ReferenceError: URL is not defined),\n// nên gắn tham số UTM bằng xử lý chuỗi.\nconst withUtm = (url, source) => {\n  const hashAt = url.indexOf('#');\n  const base = hashAt === -1 ? url : url.slice(0, hashAt);\n  const hash = hashAt === -1 ? '' : url.slice(hashAt);\n  const utm = `utm_source=${encodeURIComponent(source)}&utm_medium=social&utm_campaign=${encodeURIComponent(CONFIG.utm_campaign)}`;\n  return base + (base.includes('?') ? '&' : '?') + utm + hash;\n};\n\n// Cắt ở ranh giới câu nếu được, nếu không thì ở ranh giới từ. Không cắt giữa từ.\nconst clip = (text, max) => {\n  const t = String(text ?? '').replace(/\\s+/g, ' ').trim();\n  if (t.length <= max) return t;\n  const cut = t.slice(0, max);\n  const sentenceEnd = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));\n  if (sentenceEnd > max * 0.5) return cut.slice(0, sentenceEnd + 1);\n  return cut.slice(0, Math.max(cut.lastIndexOf(' '), 1)) + '…';\n};\n\nconst summary = clip(d.excerpt || d.content_text, CONFIG.fb_summary_max);\nconst priceLine = d.price && d.price.price_text ? `Giá: ${d.price.price_text}` : null;\nconst now = Date.now();\n\nconst items = d.jobs.map(job => {\n  const link = withUtm(d.source_url, job.channel);\n  let content;\n  let facebook = null;\n\n  if (job.channel === 'facebook') {\n    const message = [d.title, summary, priceLine, `👉 Xem chi tiết: ${link}`].filter(Boolean).join('\\n\\n');\n    content = { kind: d.image_url ? 'photo' : 'link', message, link, image_url: d.image_url || null };\n    facebook = d.image_url\n      ? { url: `https://graph.facebook.com/${CONFIG.graph_version}/${CONFIG.fb_page_id}/photos`, body: { url: d.image_url, caption: message, published: true } }\n      : { url: `https://graph.facebook.com/${CONFIG.graph_version}/${CONFIG.fb_page_id}/feed`, body: { message, link } };\n  } else {\n    content = {\n      title: clip(d.title, CONFIG.pin_title_max),\n      description: clip([summary, priceLine].filter(Boolean).join(' '), CONFIG.pin_description_max),\n      alt_text: d.image_alt || d.title,\n      link,\n      image_url: d.image_url || null,\n      board: d.pinterest_board || null,\n    };\n  }\n\n  // Giờ đăng do bộ xếp lịch của WordPress chọn (khung giờ, số bài/ngày, khoảng cách). Không có thì dùng số phút trễ.\n  const planned = job.scheduled_at ? Date.parse(job.scheduled_at) : NaN;\n  const atMs = Number.isFinite(planned) ? Math.max(now, planned) : now + Math.max(0, Math.round(Number(job.delay_minutes ?? 0) * 60)) * 1000;\n  const delaySeconds = Math.round((atMs - now) / 1000);\n  return {\n    json: {\n      job_id: job.job_id,\n      channel: job.channel,\n      post_id: d.post_id,\n      post_type: d.post_type,\n      title: d.title,\n      request_id: d.request_id ?? null,\n      has_image: Boolean(d.image_url),\n      delay_seconds: delaySeconds,\n      scheduled_at: new Date(atMs).toISOString(),\n      callback_job_url: `${d.callback_url}/${job.job_id}`,\n      content_source: 'template',\n      content_source_reason: 'Chưa bật AI, dùng mẫu cố định',\n      content,\n      facebook,\n    },\n  };\n});\n\n// Xếp lượt theo giờ đăng tăng dần. Vòng lặp phía sau xử lý lần lượt từng lượt và chờ tới đúng giờ\n// của lượt đó, nên mỗi kênh đăng theo số phút trễ riêng của nó.\nitems.sort((a, b) => a.json.delay_seconds - b.json.delay_seconds);\nconsole.log('[socialsync] Thứ tự đăng', JSON.stringify(items.map(i => ({ job_id: i.json.job_id, channel: i.json.channel, delay_seconds: i.json.delay_seconds, scheduled_at: i.json.scheduled_at }))));\nreturn items;\n"
       }
     },
     {
@@ -76,7 +76,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1820,
+        2600,
         0
       ],
       "onError": "continueRegularOutput",
@@ -96,7 +96,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ status: 'scheduled', scheduled_at: $json.scheduled_at, content: $json.content, content_source: $json.content_source, content_source_reason: $json.content_source_reason, model: $json.model, tokens_in: $json.tokens_in, tokens_out: $json.tokens_out, ai_ms: $json.ai_ms, execution_id: $execution.id }) }}",
+        "jsonBody": "={{ JSON.stringify({ status: 'scheduled', scheduled_at: $json.scheduled_at, content: $json.content, content_source: $json.content_source, content_source_reason: $json.content_source_reason, model: $json.model, tokens_in: $json.tokens_in, tokens_out: $json.tokens_out, ai_ms: $json.ai_ms, classification: $json.classification, execution_id: $execution.id }) }}",
         "options": {
           "timeout": 10000,
           "response": {
@@ -120,11 +120,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2080,
+        2860,
         0
       ],
       "parameters": {
-        "jsCode": "// Chỉ đăng những lượt WordPress đã chấp nhận chuyển sang \"scheduled\".\n// WordPress từ chối (ví dụ 409: lượt đã xử lý rồi) => dừng lượt đó, KHÔNG đăng, tránh đăng trùng.\nconst source = $('AI: kiểm tra và áp nội dung').all();\nconst out = [];\n$input.all().forEach((item, i) => {\n  const s = source[i].json;\n  const r = item.json;\n  const ok = r.statusCode === 200 && r.body && r.body.ok === true;\n  if (ok) {\n    out.push({ json: { ...s, wp_scheduled: { statusCode: r.statusCode, body: r.body } }, pairedItem: { item: i } });\n  } else {\n    console.log(`[socialsync] Dừng lượt ${s.job_id} (${s.channel}): WordPress không chấp nhận`, JSON.stringify({ statusCode: r.statusCode ?? null, body: r.body ?? null, error: r.error ?? null }));\n  }\n});\nreturn out;\n"
+        "jsCode": "// Chỉ đăng những lượt WordPress đã chấp nhận chuyển sang \"scheduled\".\n// WordPress từ chối (ví dụ 409: lượt đã xử lý rồi) => dừng lượt đó, KHÔNG đăng, tránh đăng trùng.\nconst source = $('Gom lượt cần đăng').all();\nconst out = [];\n$input.all().forEach((item, i) => {\n  const s = source[i].json;\n  const r = item.json;\n  const ok = r.statusCode === 200 && r.body && r.body.ok === true;\n  if (ok) {\n    out.push({ json: { ...s, wp_scheduled: { statusCode: r.statusCode, body: r.body } }, pairedItem: { item: i } });\n  } else {\n    console.log(`[socialsync] Dừng lượt ${s.job_id} (${s.channel}): WordPress không chấp nhận`, JSON.stringify({ statusCode: r.statusCode ?? null, body: r.body ?? null, error: r.error ?? null }));\n  }\n});\nreturn out;\n"
       }
     },
     {
@@ -133,7 +133,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2860,
+        3640,
         100
       ],
       "parameters": {
@@ -166,7 +166,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3120,
+        3900,
         -60
       ],
       "retryOnFail": true,
@@ -204,7 +204,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3380,
+        4160,
         -60
       ],
       "parameters": {
@@ -218,7 +218,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3900,
+        4680,
         100
       ],
       "onError": "continueRegularOutput",
@@ -262,7 +262,7 @@
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
       "position": [
-        2340,
+        3120,
         0
       ],
       "parameters": {
@@ -276,7 +276,7 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2600,
+        3380,
         100
       ],
       "parameters": {
@@ -292,7 +292,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3120,
+        3900,
         260
       ],
       "parameters": {
@@ -326,7 +326,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3380,
+        4160,
         180
       ],
       "parameters": {
@@ -343,7 +343,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ request_id: $json.request_id, job_id: $json.job_id, post_id: $json.post_id, title: $json.content.title, description: $json.content.description, link: $json.content.link, image_url: $json.content.image_url, alt_text: $json.content.alt_text }) }}",
+        "jsonBody": "={{ JSON.stringify({ request_id: $json.request_id, job_id: $json.job_id, post_id: $json.post_id, title: $json.content.title, description: $json.content.description, link: $json.content.link, image_url: $json.content.image_url, alt_text: $json.content.alt_text, board: $json.content.board ?? null }) }}",
         "options": {
           "timeout": 60000,
           "response": {
@@ -362,7 +362,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3640,
+        4420,
         180
       ],
       "parameters": {
@@ -376,7 +376,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3380,
+        4160,
         380
       ],
       "parameters": {
@@ -390,7 +390,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2600,
+        3380,
         -200
       ],
       "parameters": {
@@ -407,7 +407,7 @@
         0
       ],
       "parameters": {
-        "jsCode": "// Dựng MỘT yêu cầu gửi Claude cho cả bài: Claude viết nội dung cho mọi kênh trong một lần gọi.\n// Giá và link KHÔNG để AI viết: bước sau tự gắn từ dữ liệu WordPress, nên không thể bị bịa.\nconst AI = {\n  model: 'claude-opus-5-5',\n  effort: 'medium',\n  max_tokens: 8000,\n  content_max_chars: 4000,\n};\n\nconst items = $input.all();\nconst d = $('Kiểm tra dữ liệu').first().json.data;\nconst channels = items.map(i => i.json.channel);\n\nconst SYSTEM = [\n  'Bạn là biên tập viên mạng xã hội cho một cửa hàng trực tuyến ở Việt Nam bán sản phẩm sức khỏe và làm đẹp.',\n  'Từ dữ liệu một bài viết hoặc sản phẩm vừa đăng trên website, bạn viết nội dung đăng Facebook Fanpage và Pinterest.',\n  '',\n  'Nguyên tắc chung:',\n  '- Tiếng Việt có dấu, giọng thân thiện, rõ ràng, đáng tin.',\n  '- Chỉ dùng thông tin có trong dữ liệu. Không bịa thành phần, công dụng, số liệu, khuyến mãi.',\n  '- Không ghi giá và không ghi đường link: hệ thống tự gắn giá và link sau.',\n  '- Với sản phẩm sức khỏe: không khẳng định chữa, điều trị hay phòng ngừa bệnh; không so sánh với thuốc; không hứa hẹn kết quả (ví dụ \"100%\", \"khỏi hẳn\", \"cam kết\").',\n  '- Nếu là thực phẩm bảo vệ sức khỏe hoặc thực phẩm chức năng, kết thúc facebook.message bằng đúng câu: \"Thực phẩm này không phải là thuốc, không có tác dụng thay thế thuốc chữa bệnh.\"',\n  '',\n  'Facebook:',\n  '- facebook.message: 60 đến 150 từ, câu đầu là câu mở gây chú ý, chia 2 đến 4 đoạn ngắn, tối đa 3 emoji. Không có hashtag trong message.',\n  '- facebook.hashtags: 3 đến 5 hashtag liên quan, mỗi hashtag bắt đầu bằng #, viết liền không dấu.',\n  '',\n  'Pinterest:',\n  '- pinterest.title: tối đa 90 ký tự, chứa từ khóa chính người dùng hay tìm.',\n  '- pinterest.description: 150 đến 450 ký tự, viết như một mô tả tìm kiếm tự nhiên, có 2 đến 3 từ khóa, tối đa 3 hashtag.',\n  '- pinterest.alt_text: tối đa 150 ký tự, mô tả chủ đề ảnh minh họa dựa trên tiêu đề, không bịa chi tiết hình ảnh.',\n].join('\\n');\n\nconst clipText = (t, max) => { const s = String(t ?? '').replace(/\\s+/g, ' ').trim(); return s.length > max ? s.slice(0, max) + '…' : s; };\nconst post = {\n  loai_noi_dung: d.post_type === 'product' ? 'Sản phẩm' : 'Bài viết',\n  tieu_de: d.title,\n  tom_tat: d.excerpt || null,\n  noi_dung: clipText(d.content_text, AI.content_max_chars),\n  danh_muc: d.categories ?? [],\n  co_gia: Boolean(d.price && d.price.price_text),\n  kenh_can_viet: channels,\n};\n\nconst schema = {\n  type: 'object',\n  properties: {\n    facebook: {\n      type: 'object',\n      properties: {\n        message: { type: 'string' },\n        hashtags: { type: 'array', items: { type: 'string' } },\n      },\n      required: ['message', 'hashtags'],\n      additionalProperties: false,\n    },\n    pinterest: {\n      type: 'object',\n      properties: {\n        title: { type: 'string' },\n        description: { type: 'string' },\n        alt_text: { type: 'string' },\n      },\n      required: ['title', 'description', 'alt_text'],\n      additionalProperties: false,\n    },\n  },\n  required: ['facebook', 'pinterest'],\n  additionalProperties: false,\n};\n\nconst request_body = {\n  model: AI.model,\n  max_tokens: AI.max_tokens,\n  // Nếu Claude Opus 5.5 từ chối vì bộ lọc an toàn, API tự chạy lại trên mô hình dự phòng (beta server-side-fallback).\n  fallbacks: 'default',\n  output_config: { effort: AI.effort, format: { type: 'json_schema', schema } },\n  system: SYSTEM,\n  messages: [{ role: 'user', content: 'Dữ liệu bài vừa đăng trên website (JSON):\\n' + JSON.stringify(post, null, 2) }],\n};\n\nconsole.log('[socialsync] Gửi Claude', JSON.stringify({ request_id: d.request_id ?? null, post_id: d.post_id, model: AI.model, effort: AI.effort, channels, content_chars: post.noi_dung.length }));\nreturn [{ json: { request_body, ai_started_ms: Date.now(), channels } }];\n"
+        "jsCode": "// Dựng MỘT yêu cầu gửi Claude cho cả bài: Claude viết nội dung cho mọi kênh trong một lần gọi.\n// Giá và link KHÔNG để AI viết: bước sau tự gắn từ dữ liệu WordPress, nên không thể bị bịa.\nconst AI = {\n  model: 'claude-opus-5-5',\n  effort: 'medium',\n  max_tokens: 8000,\n  content_max_chars: 4000,\n};\n\nconst items = $input.all();\nconst d = $('Kiểm tra dữ liệu').first().json.data;\nconst channels = items.map(i => i.json.channel);\n\nconst SYSTEM = [\n  'Bạn là biên tập viên mạng xã hội cho một doanh nghiệp ở Việt Nam bán sản phẩm sức khỏe và làm đẹp.',\n  'Với mỗi bài vừa đăng trên website, bạn làm hai việc: phân loại bài, rồi viết nội dung đăng Facebook Fanpage và Pinterest.',\n  '',\n  'Bước 1 – Phân loại (phan_loai.loai):',\n  '- E (Kiến thức): kiến thức sức khỏe, dinh dưỡng, làm đẹp, mẹo; không giới thiệu một sản phẩm cụ thể.',\n  '- P (Sản phẩm): giới thiệu hoặc mời mua một sản phẩm cụ thể, hoặc nêu công dụng của một sản phẩm cụ thể.',\n  '- N (Tin thương hiệu): sự kiện, hoạt động xã hội, hợp tác, báo chí nói về công ty.',\n  '- X (Không đồng bộ): tin nội bộ, thông báo chính sách hoặc chương trình bán hàng cho đại lý/nhà thuốc, văn bản hành chính, bài viết bằng tiếng nước ngoài.',\n  '- Không chắc giữa hai loại thì chọn loại thận trọng hơn theo thứ tự X, P, N, E và nói rõ trong ly_do (một câu ngắn).',\n  '- nhom_nhay_cam = true nếu bài nói về trẻ em, phụ nữ mang thai hoặc cho con bú, hoặc nhắc tên, hình ảnh bác sĩ, dược sĩ, cơ sở y tế.',\n  '',\n  'Bước 2 – Viết nội dung theo loại:',\n  '- X: để trống mọi trường nội dung (chuỗi rỗng, mảng rỗng).',\n  '- N: chỉ viết Facebook; các trường Pinterest để chuỗi rỗng.',\n  '- E và P: viết cả hai kênh.',\n  '',\n  'Nguyên tắc nội dung:',\n  '- Tiếng Việt có dấu, giọng thân thiện, rõ ràng, đáng tin.',\n  '- Chỉ dùng thông tin có trong dữ liệu. Không bịa thành phần, công dụng, số liệu, khuyến mãi.',\n  '- Không ghi giá, không ghi đường link, không viết câu khuyến cáo \"Thực phẩm này không phải là thuốc…\": hệ thống tự gắn các phần này.',\n  '- Với sản phẩm sức khỏe: không khẳng định chữa, điều trị hay phòng ngừa bệnh; không so sánh với thuốc; không hứa hẹn kết quả (ví dụ \"100%\", \"khỏi hẳn\", \"cam kết\").',\n  '- Không dùng so sánh nhất (\"số 1\", \"tốt nhất\", \"duy nhất\"), không nói về giảm cân, không mô tả kết quả trước–sau, không trích lời bác sĩ, dược sĩ hay người bệnh.',\n  '- Câu mở không gán tình trạng bệnh cho người đọc (viết \"Vì sao trẻ hay ốm vặt?\" thay vì \"Con bạn đang bị…\").',\n  '',\n  'Facebook:',\n  '- facebook.message: 60 đến 150 từ, câu đầu là câu mở gây chú ý, chia 2 đến 4 đoạn ngắn, tối đa 3 emoji. Không có hashtag trong message.',\n  '- facebook.hashtags: 3 đến 5 hashtag liên quan, mỗi hashtag bắt đầu bằng #, viết liền không dấu.',\n  '',\n  'Pinterest:',\n  '- pinterest.title: tối đa 90 ký tự, chứa từ khóa chính người dùng hay tìm.',\n  '- pinterest.description: 150 đến 400 ký tự, viết như một mô tả tìm kiếm tự nhiên, có 2 đến 3 từ khóa, tối đa 3 hashtag.',\n  '- pinterest.alt_text: tối đa 150 ký tự, mô tả chủ đề ảnh minh họa dựa trên tiêu đề, không bịa chi tiết hình ảnh.',\n].join('\\n');\n\nconst clipText = (t, max) => { const s = String(t ?? '').replace(/\\s+/g, ' ').trim(); return s.length > max ? s.slice(0, max) + '…' : s; };\nconst post = {\n  loai_noi_dung: d.post_type === 'product' ? 'Sản phẩm' : 'Bài viết',\n  tieu_de: d.title,\n  tom_tat: d.excerpt || null,\n  noi_dung: clipText(d.content_text, AI.content_max_chars),\n  danh_muc: d.categories ?? [],\n  co_gia: Boolean(d.price && d.price.price_text),\n  kenh_can_viet: channels,\n};\n\nconst schema = {\n  type: 'object',\n  properties: {\n    phan_loai: {\n      type: 'object',\n      properties: {\n        loai: { type: 'string', enum: ['E', 'P', 'N', 'X'] },\n        ly_do: { type: 'string' },\n        nhom_nhay_cam: { type: 'boolean' },\n      },\n      required: ['loai', 'ly_do', 'nhom_nhay_cam'],\n      additionalProperties: false,\n    },\n    facebook: {\n      type: 'object',\n      properties: {\n        message: { type: 'string' },\n        hashtags: { type: 'array', items: { type: 'string' } },\n      },\n      required: ['message', 'hashtags'],\n      additionalProperties: false,\n    },\n    pinterest: {\n      type: 'object',\n      properties: {\n        title: { type: 'string' },\n        description: { type: 'string' },\n        alt_text: { type: 'string' },\n      },\n      required: ['title', 'description', 'alt_text'],\n      additionalProperties: false,\n    },\n  },\n  required: ['phan_loai', 'facebook', 'pinterest'],\n  additionalProperties: false,\n};\n\nconst request_body = {\n  model: AI.model,\n  max_tokens: AI.max_tokens,\n  // Nếu Claude Opus 5.5 từ chối vì bộ lọc an toàn, API tự chạy lại trên mô hình dự phòng (beta server-side-fallback).\n  fallbacks: 'default',\n  output_config: { effort: AI.effort, format: { type: 'json_schema', schema } },\n  system: SYSTEM,\n  messages: [{ role: 'user', content: 'Dữ liệu bài vừa đăng trên website (JSON):\\n' + JSON.stringify(post, null, 2) }],\n};\n\nconsole.log('[socialsync] Gửi Claude', JSON.stringify({ request_id: d.request_id ?? null, post_id: d.post_id, model: AI.model, effort: AI.effort, channels, content_chars: post.noi_dung.length }));\nreturn [{ json: { request_body, ai_started_ms: Date.now(), channels } }];\n"
       }
     },
     {
@@ -471,7 +471,226 @@
         0
       ],
       "parameters": {
-        "jsCode": "// Kiểm tra kết quả Claude. Đạt thì thay nội dung mẫu bằng nội dung AI; không đạt thì GIỮ nội dung mẫu\n// và ghi rõ lý do vào content_source_reason. Lỗi AI không bao giờ làm hỏng việc đăng bài.\nconst CONFIG = { fb_page_id: '273106486233478', graph_version: 'v21.0' };\nconst DISCLAIMER = 'Thực phẩm này không phải là thuốc, không có tác dụng thay thế thuốc chữa bệnh.';\n// Các cụm từ quảng cáo sức khỏe bị cấm hoặc rủi ro cao. Bỏ câu cảnh báo bắt buộc ra trước khi dò.\nconst BANNED = /(chữa\\s+(khỏi|bệnh|trị|dứt)|điều\\s+trị|đặc\\s+trị|khỏi\\s+hẳn|khỏi\\s+bệnh|thay\\s+thế\\s+thuốc|100\\s*%|cam\\s+kết|thần\\s+dược)/i;\n\nconst req = $('AI: dựng yêu cầu').first().json;\nconst templ = $('Tách lượt và dựng nội dung').all();\nconst d = $('Kiểm tra dữ liệu').first().json.data;\nconst r = $input.first().json;\nconst aiMs = Date.now() - req.ai_started_ms;\n\nlet body = r.body;\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { /* giữ chuỗi */ } }\nconst usage = body && body.usage ? body.usage : {};\nconst modelUsed = body && body.model ? body.model : null;\n\nconst problems = [];\nlet ai = null;\nif (r.error && r.statusCode === undefined) {\n  problems.push(`không gọi được Claude: ${r.error.message ?? JSON.stringify(r.error)}`);\n} else if (r.statusCode !== 200) {\n  const e = (body && body.error) || {};\n  problems.push(`Claude trả HTTP ${r.statusCode}${e.type ? ` (${e.type})` : ''}: ${e.message ?? String(JSON.stringify(body)).slice(0, 300)}${r.statusCode === 401 ? ' - kiểm tra ANTHROPIC_API_KEY trong .env rồi chạy lại scripts/n8n-nap-luong.ps1' : ''}`);\n} else if (body.stop_reason !== 'end_turn') {\n  problems.push(`Claude dừng với stop_reason=${body.stop_reason}${body.stop_details ? ` (${JSON.stringify(body.stop_details)})` : ''}`);\n} else {\n  const text = (body.content ?? []).filter(b => b.type === 'text').map(b => b.text).join('');\n  try { ai = JSON.parse(text); } catch (e) { problems.push(`kết quả không phải JSON: ${text.slice(0, 200)}`); }\n}\n\nif (ai) {\n  const fb = ai.facebook ?? {};\n  const pin = ai.pinterest ?? {};\n  const len = s => String(s ?? '').trim().length;\n  if (len(fb.message) < 80 || len(fb.message) > 2000) problems.push(`facebook.message dài ${len(fb.message)} ký tự (cần 80-2000)`);\n  if (!Array.isArray(fb.hashtags) || fb.hashtags.length > 8) problems.push('facebook.hashtags không hợp lệ');\n  if (len(pin.title) < 10 || len(pin.title) > 100) problems.push(`pinterest.title dài ${len(pin.title)} ký tự (cần 10-100)`);\n  if (len(pin.description) < 50 || len(pin.description) > 500) problems.push(`pinterest.description dài ${len(pin.description)} ký tự (cần 50-500)`);\n  if (len(pin.alt_text) < 5 || len(pin.alt_text) > 500) problems.push(`pinterest.alt_text dài ${len(pin.alt_text)} ký tự`);\n  const allText = [fb.message, ...(fb.hashtags ?? []), pin.title, pin.description, pin.alt_text].join(' ').split(DISCLAIMER).join(' ');\n  const banned = allText.match(BANNED);\n  if (banned) problems.push(`có cụm từ quảng cáo sức khỏe bị cấm: \"${banned[0]}\"`);\n}\n\nconst useAi = ai && problems.length === 0;\nconst nChannels = templ.length;\nconst reason = useAi\n  ? `Claude viết (${modelUsed}, 1 lần gọi cho ${nChannels} kênh, ${aiMs} ms)`\n  : `Dùng mẫu cố định vì AI không đạt: ${problems.join('; ')}`.slice(0, 250);\nconsole.log('[socialsync] Kết quả AI', JSON.stringify({ use_ai: useAi, problems, model: modelUsed, usage, ai_ms: aiMs, status: r.statusCode ?? null, stop_reason: body?.stop_reason ?? null }));\n\nconst priceLine = d.price && d.price.price_text ? `Giá: ${d.price.price_text}` : null;\nreturn templ.map((item, i) => {\n  const s = item.json;\n  const out = {\n    ...s,\n    content_source: useAi ? 'ai' : 'template',\n    content_source_reason: reason,\n    model: modelUsed,\n    tokens_in: usage.input_tokens ?? null,\n    tokens_out: usage.output_tokens ?? null,\n    ai_ms: aiMs,\n    ai_problems: problems,\n  };\n  if (useAi) {\n    if (s.channel === 'facebook') {\n      const link = s.content.link;\n      const tags = (ai.facebook.hashtags ?? []).map(t => String(t).trim()).filter(Boolean).map(t => t.startsWith('#') ? t : '#' + t).join(' ');\n      const message = [ai.facebook.message.trim(), priceLine, `👉 Xem chi tiết: ${link}`, tags].filter(Boolean).join('\\n\\n');\n      out.content = { ...s.content, message };\n      out.facebook = d.image_url\n        ? { url: `https://graph.facebook.com/${CONFIG.graph_version}/${CONFIG.fb_page_id}/photos`, body: { url: d.image_url, caption: message, published: true } }\n        : { url: `https://graph.facebook.com/${CONFIG.graph_version}/${CONFIG.fb_page_id}/feed`, body: { message, link } };\n    } else {\n      out.content = {\n        ...s.content,\n        title: ai.pinterest.title.trim().slice(0, 100),\n        description: [ai.pinterest.description.trim(), priceLine].filter(Boolean).join(' ').slice(0, 500),\n        alt_text: ai.pinterest.alt_text.trim().slice(0, 500),\n      };\n    }\n  }\n  return { json: out, pairedItem: { item: i } };\n});\n"
+        "jsCode": "// Kiểm tra kết quả Claude, áp phân loại, quyết định từng lượt:\n//   skip    – không đăng (bài loại X; tin thương hiệu N trên Pinterest)\n//   review  – chờ người duyệt (chế độ Duyệt bắt buộc)\n//   publish – đăng theo lịch luôn (chế độ Tự đăng)\n//   preview – chạy thử, không đăng\n// Nội dung AI không đạt kiểm tra thì GIỮ nội dung mẫu cố định và ghi lý do. Lỗi AI không chặn việc đăng.\nconst CONFIG = { fb_page_id: '273106486233478', graph_version: 'v21.0' };\n// Các cụm từ quảng cáo sức khỏe bị cấm hoặc rủi ro cao. Câu khuyến cáo do hệ thống gắn được bỏ ra trước khi dò.\nconst BANNED = /(chữa\\s+(khỏi|bệnh|trị|dứt)|điều\\s+trị|đặc\\s+trị|khỏi\\s+hẳn|khỏi\\s+bệnh|hết\\s+bệnh|dứt\\s+điểm|thay\\s+thế\\s+thuốc|100\\s*%|cam\\s+kết|thần\\s+dược|số\\s+1(?!\\d)|tốt\\s+nhất|duy\\s+nhất|giảm\\s+cân)/i;\nconst LABEL = { E: 'Kiến thức', P: 'Sản phẩm', N: 'Tin thương hiệu', X: 'Không đồng bộ' };\n\nconst req = $('AI: dựng yêu cầu').first().json;\nconst templ = $('Tách lượt và dựng nội dung').all();\nconst d = $('Kiểm tra dữ liệu').first().json.data;\nconst r = $input.first().json;\nconst aiMs = Date.now() - req.ai_started_ms;\nconst DISCLAIMER = String((d.rules && d.rules.product_disclaimer) || '').trim();\n\nlet body = r.body;\nif (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { /* giữ chuỗi */ } }\nconst usage = body && body.usage ? body.usage : {};\nconst modelUsed = body && body.model ? body.model : null;\n\nconst problems = [];\nlet ai = null;\nif (r.error && r.statusCode === undefined) {\n  problems.push(`không gọi được Claude: ${r.error.message ?? JSON.stringify(r.error)}`);\n} else if (r.statusCode !== 200) {\n  const e = (body && body.error) || {};\n  problems.push(`Claude trả HTTP ${r.statusCode}${e.type ? ` (${e.type})` : ''}: ${e.message ?? String(JSON.stringify(body)).slice(0, 300)}${r.statusCode === 401 ? ' - kiểm tra ANTHROPIC_API_KEY trong .env rồi chạy lại scripts/n8n-nap-luong.ps1' : ''}`);\n} else if (body.stop_reason !== 'end_turn') {\n  problems.push(`Claude dừng với stop_reason=${body.stop_reason}${body.stop_details ? ` (${JSON.stringify(body.stop_details)})` : ''}`);\n} else {\n  const text = (body.content ?? []).filter(b => b.type === 'text').map(b => b.text).join('');\n  try { ai = JSON.parse(text); } catch (e) { problems.push(`kết quả không phải JSON: ${text.slice(0, 200)}`); }\n}\n\n// Phân loại. Sản phẩm WooCommerce luôn là P (quy tắc cứng, không phụ thuộc AI).\nlet cls = ai && ai.phan_loai && LABEL[ai.phan_loai.loai] ? ai.phan_loai.loai : null;\nlet clsReason = ai && ai.phan_loai ? String(ai.phan_loai.ly_do || '') : '';\nconst sensitive = Boolean(ai && ai.phan_loai && ai.phan_loai.nhom_nhay_cam);\nif (!cls) {\n  cls = d.post_type === 'product' ? 'P' : 'E';\n  clsReason = 'AI không phân loại được, dùng mặc định theo loại nội dung';\n}\nif (d.post_type === 'product' && cls !== 'P') {\n  clsReason = `Sản phẩm WooCommerce luôn tính là Sản phẩm (AI đề xuất ${LABEL[cls]}: ${clsReason})`;\n  cls = 'P';\n}\n\nconst len = s => String(s ?? '').trim().length;\nif (ai && cls !== 'X') {\n  const fb = ai.facebook ?? {};\n  const pin = ai.pinterest ?? {};\n  if (len(fb.message) < 80 || len(fb.message) > 2000) problems.push(`facebook.message dài ${len(fb.message)} ký tự (cần 80-2000)`);\n  if (!Array.isArray(fb.hashtags) || fb.hashtags.length > 8) problems.push('facebook.hashtags không hợp lệ');\n  if (cls !== 'N') {\n    if (len(pin.title) < 10 || len(pin.title) > 100) problems.push(`pinterest.title dài ${len(pin.title)} ký tự (cần 10-100)`);\n    if (len(pin.description) < 50 || len(pin.description) > 500) problems.push(`pinterest.description dài ${len(pin.description)} ký tự (cần 50-500)`);\n    if (len(pin.alt_text) < 5 || len(pin.alt_text) > 500) problems.push(`pinterest.alt_text dài ${len(pin.alt_text)} ký tự`);\n  }\n  let allText = [fb.message, ...(fb.hashtags ?? []), pin.title, pin.description, pin.alt_text].join(' ');\n  if (DISCLAIMER) allText = allText.split(DISCLAIMER).join(' ');\n  const banned = allText.match(BANNED);\n  if (banned) problems.push(`có cụm từ quảng cáo sức khỏe bị cấm: \"${banned[0]}\"`);\n}\n\nconst useAi = Boolean(ai) && problems.length === 0 && cls !== 'X';\nconst reason = useAi\n  ? `Claude viết (${modelUsed}, 1 lần gọi cho ${templ.length} kênh, ${aiMs} ms)`\n  : (cls === 'X' && ai ? `AI phân loại: Không đồng bộ` : `Dùng mẫu cố định vì AI không đạt: ${problems.join('; ')}`).slice(0, 250);\nconsole.log('[socialsync] Kết quả AI', JSON.stringify({ use_ai: useAi, classification: cls, reason: clsReason, sensitive, problems, model: modelUsed, usage, ai_ms: aiMs, status: r.statusCode ?? null, stop_reason: body?.stop_reason ?? null, dry_run: d.dry_run === true, approval_required: d.approval_required === true }));\n\nconst priceLine = d.price && d.price.price_text ? `Giá: ${d.price.price_text}` : null;\nconst clipWords = (s, max) => { s = String(s).trim(); if (s.length <= max) return s; const c = s.slice(0, max); return c.slice(0, Math.max(c.lastIndexOf(' '), 1)) + '…'; };\nconst fbRequest = (message, link) => d.image_url\n  ? { url: `https://graph.facebook.com/${CONFIG.graph_version}/${CONFIG.fb_page_id}/photos`, body: { url: d.image_url, caption: message, published: true } }\n  : { url: `https://graph.facebook.com/${CONFIG.graph_version}/${CONFIG.fb_page_id}/feed`, body: { message, link } };\n\nreturn templ.map((item, i) => {\n  const s = item.json;\n  const out = {\n    ...s,\n    classification: cls,\n    content_source: useAi ? 'ai' : 'template',\n    content_source_reason: reason,\n    model: modelUsed,\n    tokens_in: usage.input_tokens ?? null,\n    tokens_out: usage.output_tokens ?? null,\n    ai_ms: aiMs,\n    ai_problems: problems,\n  };\n\n  let decision;\n  let decisionReason = '';\n  if (cls === 'X') {\n    decision = 'skip';\n    decisionReason = `AI phân loại bài là Không đồng bộ: ${clsReason}`;\n  } else if (cls === 'N' && s.channel === 'pinterest') {\n    decision = 'skip';\n    decisionReason = 'Tin thương hiệu chỉ đăng Facebook, không đăng Pinterest';\n  } else if (d.dry_run === true) {\n    decision = 'preview';\n  } else {\n    decision = d.approval_required === true ? 'review' : 'publish';\n  }\n\n  const content = { ...s.content, classification_reason: clsReason, sensitive };\n  if (s.channel === 'facebook') {\n    if (useAi) {\n      const tags = (ai.facebook.hashtags ?? []).map(t => String(t).trim()).filter(Boolean).map(t => t.startsWith('#') ? t : '#' + t).join(' ');\n      content.message = [ai.facebook.message.trim(), cls === 'P' ? DISCLAIMER : null, priceLine, `👉 Xem chi tiết: ${s.content.link}`, tags].filter(Boolean).join('\\n\\n');\n    } else if (cls === 'P' && DISCLAIMER) {\n      content.message = String(s.content.message).replace('\\n\\n👉', `\\n\\n${DISCLAIMER}\\n\\n👉`);\n    }\n    out.facebook = fbRequest(content.message, s.content.link);\n  } else {\n    if (useAi) {\n      content.title = ai.pinterest.title.trim().slice(0, 100);\n      content.description = [ai.pinterest.description.trim(), priceLine].filter(Boolean).join(' ');\n      content.alt_text = ai.pinterest.alt_text.trim().slice(0, 500);\n    }\n    if (cls === 'P' && DISCLAIMER) {\n      content.description = clipWords(content.description, 500 - DISCLAIMER.length - 1) + ' ' + DISCLAIMER;\n    }\n    content.description = clipWords(content.description, 500);\n  }\n  out.content = content;\n  out.decision = decision;\n  out.decision_reason = decisionReason;\n  return { json: out, pairedItem: { item: i } };\n});\n"
+      }
+    },
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1b01",
+      "name": "Chạy thử?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1820,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d1a2b3c4-e5f6-4a7b-8c9d-0e1f2a3b4c01",
+              "leftValue": "={{ $('Kiểm tra dữ liệu').first().json.data.dry_run === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1b02",
+      "name": "Đăng theo lịch luôn?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2080,
+        120
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d1a2b3c4-e5f6-4a7b-8c9d-0e1f2a3b4c02",
+              "leftValue": "={{ $json.decision === 'publish' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1b03",
+      "name": "Chạy thử: gom kết quả",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        -200
+      ],
+      "parameters": {
+        "jsCode": "// Gom kết quả chạy thử của một bài (mọi kênh) thành một gói gửi về WordPress. Không đăng gì.\nconst d = $('Kiểm tra dữ liệu').first().json.data;\nconst items = $input.all().map(i => i.json);\nconst first = items[0] ?? {};\nconst DEC = { preview: 'Sẽ đăng (sau khi duyệt)', skip: 'Không đăng' };\nconst result = {\n  classification_reason: first.content?.classification_reason ?? '',\n  sensitive: Boolean(first.content?.sensitive),\n  content_source: first.content_source ?? null,\n  content_source_reason: first.content_source_reason ?? null,\n  model: first.model ?? null,\n  problems: first.ai_problems ?? [],\n  decision_text: items.map(i => `${i.channel}: ${DEC[i.decision] ?? i.decision}${i.decision_reason ? ' (' + i.decision_reason + ')' : ''}`).join(' · '),\n};\nfor (const i of items) {\n  if (i.channel === 'facebook') result.facebook = { message: i.content.message, skip: i.decision === 'skip' ? i.decision_reason : null };\n  if (i.channel === 'pinterest') result.pinterest = { title: i.content.title, description: i.content.description, alt_text: i.content.alt_text, board: i.content.board, skip: i.decision === 'skip' ? i.decision_reason : null };\n}\nconsole.log('[socialsync] Chạy thử xong', JSON.stringify({ preview_id: d.preview_id, classification: first.classification, decisions: result.decision_text }));\nreturn [{ json: {\n  callback_url: d.callback_url,\n  request_id: d.request_id ?? null,\n  payload: { ok: true, classification: first.classification ?? null, tokens_in: first.tokens_in ?? null, tokens_out: first.tokens_out ?? null, ai_ms: first.ai_ms ?? null, result },\n} }];\n"
+      }
+    },
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1b04",
+      "name": "Chạy thử: gửi kết quả về WordPress",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2340,
+        -200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callback_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SocialSync-Request-Id",
+              "value": "={{ $json.request_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SocSyncSecret001",
+          "name": "SocialSync - mã bí mật từ WordPress"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1b05",
+      "name": "Báo WordPress: chờ duyệt / bỏ qua",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2340,
+        240
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.callback_job_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-SocialSync-Request-Id",
+              "value": "={{ $json.request_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.decision === 'review' ? { status: 'needs_review', scheduled_at: $json.scheduled_at, content: $json.content, content_source: $json.content_source, content_source_reason: $json.content_source_reason, classification: $json.classification, model: $json.model, tokens_in: $json.tokens_in, tokens_out: $json.tokens_out, ai_ms: $json.ai_ms, execution_id: $execution.id } : { status: 'skipped', error: $json.decision_reason, content: $json.content, content_source: $json.content_source, content_source_reason: $json.content_source_reason, classification: $json.classification, model: $json.model, tokens_in: $json.tokens_in, tokens_out: $json.tokens_out, ai_ms: $json.ai_ms, execution_id: $execution.id }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SocSyncSecret001",
+          "name": "SocialSync - mã bí mật từ WordPress"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1b06",
+      "name": "Gom lượt cần đăng",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2600,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Điểm gặp của hai đường: (1) Tự đăng – lượt vừa được AI viết; (2) lệnh đăng sau khi người duyệt bấm Duyệt.\nconst items = $input.all();\nconsole.log('[socialsync] Lượt cần đăng', JSON.stringify(items.map(i => ({ job_id: i.json.job_id, channel: i.json.channel, scheduled_at: i.json.scheduled_at, approved: i.json.approved === true }))));\nreturn items.map((it, i) => ({ json: it.json, pairedItem: { item: i } }));\n"
+      }
+    },
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1b07",
+      "name": "Nhận lệnh đăng đã duyệt",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        1820,
+        520
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "socialsync/approved",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SocSyncSecret001",
+          "name": "SocialSync - mã bí mật từ WordPress"
+        }
+      },
+      "webhookId": "4b7d9e1f-2a3c-4d5e-8f60-718293a4b5c6"
+    },
+    {
+      "id": "5b0e7a3c-1f7e-4c55-9a39-0c2f4f6d1b08",
+      "name": "Dựng lượt đã duyệt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2340,
+        520
+      ],
+      "parameters": {
+        "jsCode": "// Lệnh đăng từ WordPress sau khi người duyệt bấm Duyệt (nội dung có thể đã được sửa).\n// Dựng lại từng lượt đúng dạng mà phần đăng bài phía sau cần.\nconst CONFIG = { fb_page_id: '273106486233478', graph_version: 'v21.0' };\nconst body = $input.first().json.body ?? {};\nconst jobs = Array.isArray(body.jobs) ? body.jobs : [];\nif (body.event !== 'approved' || !jobs.length || !body.callback_url) {\n  throw new Error(`Lệnh đăng không hợp lệ: event=${body.event}, jobs=${jobs.length}, callback_url=${Boolean(body.callback_url)}`);\n}\nconst now = Date.now();\nconst items = jobs.map(job => {\n  const content = { ...(job.content ?? {}) };\n  content.image_url = content.image_url || body.image_url || null;\n  const planned = Date.parse(job.scheduled_at);\n  const atMs = Number.isFinite(planned) ? Math.max(now, planned) : now;\n  let facebook = null;\n  if (job.channel === 'facebook') {\n    facebook = content.image_url\n      ? { url: `https://graph.facebook.com/${CONFIG.graph_version}/${CONFIG.fb_page_id}/photos`, body: { url: content.image_url, caption: content.message, published: true } }\n      : { url: `https://graph.facebook.com/${CONFIG.graph_version}/${CONFIG.fb_page_id}/feed`, body: { message: content.message, link: content.link } };\n  }\n  return { json: {\n    job_id: job.job_id,\n    channel: job.channel,\n    post_id: body.post_id,\n    post_type: body.post_type,\n    title: body.title,\n    request_id: body.request_id ?? null,\n    has_image: Boolean(content.image_url),\n    delay_seconds: Math.round((atMs - now) / 1000),\n    scheduled_at: new Date(atMs).toISOString(),\n    callback_job_url: `${body.callback_url}/${job.job_id}`,\n    content_source: job.content_source ?? null,\n    content_source_reason: job.content_source_reason ?? null,\n    model: job.model ?? null,\n    tokens_in: job.tokens_in ?? null,\n    tokens_out: job.tokens_out ?? null,\n    ai_ms: job.ai_ms ?? null,\n    classification: job.classification ?? null,\n    content,\n    facebook,\n    decision: 'publish',\n    approved: true,\n    approved_by: body.approved_by ?? null,\n  } };\n});\nitems.sort((a, b) => a.json.delay_seconds - b.json.delay_seconds);\nconsole.log('[socialsync] Nhận lệnh đăng đã duyệt', JSON.stringify({ post_id: body.post_id, by: body.approved_by, jobs: items.map(i => ({ job_id: i.json.job_id, channel: i.json.channel, scheduled_at: i.json.scheduled_at, edited: i.json.content.edited_fields ?? [] })) }));\nreturn items;\n"
       }
     }
   ],
@@ -696,6 +915,86 @@
       ]
     },
     "AI: kiểm tra và áp nội dung": {
+      "main": [
+        [
+          {
+            "node": "Chạy thử?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chạy thử?": {
+      "main": [
+        [
+          {
+            "node": "Chạy thử: gom kết quả",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Đăng theo lịch luôn?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chạy thử: gom kết quả": {
+      "main": [
+        [
+          {
+            "node": "Chạy thử: gửi kết quả về WordPress",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Đăng theo lịch luôn?": {
+      "main": [
+        [
+          {
+            "node": "Gom lượt cần đăng",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Báo WordPress: chờ duyệt / bỏ qua",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nhận lệnh đăng đã duyệt": {
+      "main": [
+        [
+          {
+            "node": "Dựng lượt đã duyệt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dựng lượt đã duyệt": {
+      "main": [
+        [
+          {
+            "node": "Gom lượt cần đăng",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gom lượt cần đăng": {
       "main": [
         [
           {

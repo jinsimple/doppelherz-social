@@ -73,6 +73,10 @@ final class SocialSync_Log_Page {
 			<h1>Nhật ký đồng bộ</h1>
 			<p>Mỗi dòng là một lượt đưa một bài lên một kênh. Lượt mới tạo khi bài viết hoặc sản phẩm được xuất bản lần đầu. Giờ hiển thị theo giờ của website.</p>
 			<?php self::render_notice(); ?>
+			<?php $waiting = SocialSync_Review::pending_count(); ?>
+			<?php if ( $waiting ) : ?>
+				<div class="notice notice-warning inline"><p><strong><?php echo (int) $waiting; ?> bài đang chờ duyệt.</strong> <a href="<?php echo esc_url( SocialSync_Review::url() ); ?>">Mở danh sách chờ duyệt</a></p></div>
+			<?php endif; ?>
 
 			<?php self::render_filters( $filters ); ?>
 
@@ -240,6 +244,16 @@ final class SocialSync_Log_Page {
 		<details>
 			<summary>Chi tiết</summary>
 			<ul style="margin:6px 0">
+				<?php if ( ! empty( $job['classification'] ) ) : ?>
+					<li>Phân loại: <?php echo esc_html( SocialSync_Report::CLASS_LABELS[ $job['classification'] ] ?? (string) $job['classification'] ); ?><?php echo is_array( $decoded ) && ! empty( $decoded['classification_reason'] ) ? esc_html( ' — ' . $decoded['classification_reason'] ) : ''; ?></li>
+				<?php endif; ?>
+				<?php if ( ! empty( $job['reviewed_at'] ) ) : ?>
+					<li>Duyệt: <?php echo esc_html( sprintf( '%s lúc %s — %s', (string) ( get_userdata( (int) $job['reviewed_by'] )->display_name ?? '#' . $job['reviewed_by'] ), self::local( $job['reviewed_at'] ), (string) $job['review_note'] ) ); ?></li>
+				<?php endif; ?>
+				<?php if ( ! empty( $job['metrics'] ) ) : ?>
+					<?php $m = json_decode( (string) $job['metrics'], true ); ?>
+					<li>Tương tác (<?php echo esc_html( self::local( $job['metrics_at'] ) ); ?>): <?php echo esc_html( sprintf( '%d cảm xúc · %d bình luận · %d chia sẻ', $m['reactions'] ?? 0, $m['comments'] ?? 0, $m['shares'] ?? 0 ) ); ?></li>
+				<?php endif; ?>
 				<li>Nguồn nội dung: <?php echo esc_html( (string) ( $job['content_source'] ?? '—' ) ); ?><?php echo ! empty( $job['content_source_reason'] ) ? esc_html( ' (' . $job['content_source_reason'] . ')' ) : ''; ?></li>
 				<?php if ( ! empty( $job['model'] ) ) : ?>
 					<li>AI: <?php echo esc_html( sprintf( '%s · %s token vào · %s token ra · %s ms', $job['model'], $job['tokens_in'] ?? '?', $job['tokens_out'] ?? '?', $job['ai_ms'] ?? '?' ) ); ?></li>
@@ -265,6 +279,10 @@ final class SocialSync_Log_Page {
 	}
 
 	private static function render_actions( array $job ): void {
+		if ( 'needs_review' === $job['status'] ) {
+			printf( '<a class="button button-primary button-small" href="%s">Xem và duyệt</a>', esc_url( SocialSync_Review::url( (int) $job['post_id'] ) ) );
+			return;
+		}
 		$check = self::can_resync( $job );
 		if ( true !== $check ) {
 			printf( '<span class="description">%s</span>', esc_html( $check ) );
@@ -366,6 +384,10 @@ final class SocialSync_Log_Page {
 				'content'               => null,
 				'content_source'        => null,
 				'content_source_reason' => null,
+				'classification'        => null,
+				'reviewed_by'           => null,
+				'reviewed_at'           => null,
+				'review_note'           => null,
 			)
 		);
 

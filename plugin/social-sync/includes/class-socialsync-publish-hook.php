@@ -94,6 +94,22 @@ final class SocialSync_Publish_Hook {
 			return;
 		}
 
+		// Chặn sớm bài không nên lên mạng xã hội (tin nội bộ, thông báo đại lý dạng PDF...).
+		// Vẫn tạo lượt để nhật ký cho thấy bài bị chặn và vì sao, nhưng không gửi sang n8n.
+		$block = self::block_reason( $post );
+		if ( null !== $block ) {
+			SocialSync_DB::update_jobs(
+				array_column( $created, 'job_id' ),
+				array(
+					'status'         => 'skipped',
+					'classification' => 'X',
+					'error'          => 'Không đồng bộ: ' . $block,
+				)
+			);
+			SocialSync_Logger::info( 'hook.blocked', 'Bài bị chặn, không gửi sang n8n: ' . $block, $ctx + array( 'job_ids' => array_column( $created, 'job_id' ) ) );
+			return;
+		}
+
 		if ( isset( self::$queue[ $post_id ] ) ) {
 			self::$queue[ $post_id ]['jobs'] = array_merge( self::$queue[ $post_id ]['jobs'], $created );
 		} else {
@@ -128,6 +144,25 @@ final class SocialSync_Publish_Hook {
 		}
 		if ( '' !== (string) $post->post_password ) {
 			return 'bài được đặt mật khẩu';
+		}
+		return null;
+	}
+
+	/** Lý do chặn theo danh mục / tiêu đề, hoặc null nếu được đồng bộ. */
+	public static function block_reason( WP_Post $post ): ?string {
+		$title = (string) get_the_title( $post );
+		if ( SocialSync_Settings::get( 'block_pdf_title' ) && preg_match( '/\.pdf\b/i', $title ) ) {
+			return 'tiêu đề là tên file PDF (thường là thông báo cho đại lý)';
+		}
+		$blocked = SocialSync_Settings::blocked_categories();
+		if ( $blocked ) {
+			$taxonomy = 'product' === $post->post_type ? 'product_cat' : 'category';
+			$names    = wp_get_post_terms( $post->ID, $taxonomy, array( 'fields' => 'names' ) );
+			foreach ( is_wp_error( $names ) ? array() : (array) $names as $name ) {
+				if ( in_array( mb_strtolower( trim( (string) $name ) ), $blocked, true ) ) {
+					return 'thuộc danh mục bị chặn "' . $name . '"';
+				}
+			}
 		}
 		return null;
 	}

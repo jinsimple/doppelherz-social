@@ -48,6 +48,29 @@ final class SocialSync_Settings {
 			'n8n_editor'    => 'https://n8n.adaptivealgo.uk',
 			// Mã xác minh website của Pinterest (thẻ meta p:domain_verify). Không phải bí mật: ai xem mã nguồn trang cũng thấy.
 			'pinterest_verify' => '',
+			// required: AI viết xong thì chờ người duyệt. auto: đăng theo lịch, không cần duyệt.
+			'approval'         => 'required',
+			// Webhook n8n nhận lệnh đăng sau khi duyệt, và webhook chạy báo cáo.
+			'approve_url'      => 'http://n8n:5678/webhook/socialsync/approved',
+			'report_url'       => 'http://n8n:5678/webhook/socialsync/report',
+			// Lịch đăng tự rải: chỉ đăng trong khung giờ, tối đa N bài/ngày/kênh, cách nhau ít nhất X phút.
+			'window_start'     => '07:00',
+			'window_end'       => '22:00',
+			'max_per_day'      => array(
+				'facebook'  => 10,
+				'pinterest' => 10,
+			),
+			'min_gap'          => 30,
+			// Bài thuộc các danh mục này (tên, phân cách bằng dấu phẩy) không đồng bộ.
+			'blocked_categories' => 'Tin nội bộ, Thông báo đại lý',
+			'block_pdf_title'  => 1,
+			// Ghép danh mục website sang board Pinterest, mỗi dòng: Tên danh mục = Tên board.
+			'board_map'        => '',
+			'default_board'    => 'Sức khoẻ & Dinh dưỡng',
+			// Câu khuyến cáo code tự gắn vào bài loại Sản phẩm (P). Để trống nếu cửa hàng không bán thực phẩm bảo vệ sức khỏe.
+			'product_disclaimer' => 'Thực phẩm này không phải là thuốc, không có tác dụng thay thế thuốc chữa bệnh.',
+			// Nguồn bài thật cho trang "Chạy thử".
+			'preview_source'   => 'https://doppelherz.vn',
 			'log_level'     => 'debug',
 			'log_requests'  => 0,
 			'log_http'      => 0,
@@ -120,6 +143,54 @@ final class SocialSync_Settings {
 
 	public static function timeout(): int {
 		return max( 2, min( 30, (int) self::get( 'timeout' ) ) );
+	}
+
+	public static function approval_required(): bool {
+		return 'auto' !== self::get( 'approval' );
+	}
+
+	public static function min_gap(): int {
+		return max( 0, (int) self::get( 'min_gap' ) );
+	}
+
+	public static function max_per_day( string $channel ): int {
+		return max( 1, (int) ( self::get( 'max_per_day' )[ $channel ] ?? 10 ) );
+	}
+
+	/** Phút trong ngày, ví dụ "07:30" -> 450. */
+	public static function window(): array {
+		$to_min = static function ( string $hm, int $fallback ): int {
+			return preg_match( '/^(\d{1,2}):(\d{2})$/', $hm, $m ) ? min( 1439, (int) $m[1] * 60 + (int) $m[2] ) : $fallback;
+		};
+		$start = $to_min( (string) self::get( 'window_start' ), 420 );
+		$end   = $to_min( (string) self::get( 'window_end' ), 1320 );
+		return $end > $start ? array( $start, $end ) : array( 0, 1439 );
+	}
+
+	/** @return string[] tên danh mục bị chặn, viết thường. */
+	public static function blocked_categories(): array {
+		$items = array_map( 'trim', explode( ',', (string) self::get( 'blocked_categories' ) ) );
+		return array_values( array_filter( array_map( static fn( $s ) => mb_strtolower( $s ), $items ) ) );
+	}
+
+	/** Board Pinterest cho một bài theo danh mục, theo bảng ghép trong cấu hình. */
+	public static function board_for( array $categories ): string {
+		$map = array();
+		foreach ( preg_split( '/\R/', (string) self::get( 'board_map' ) ) as $line ) {
+			if ( false !== strpos( $line, '=' ) ) {
+				[ $cat, $board ] = array_map( 'trim', explode( '=', $line, 2 ) );
+				if ( '' !== $cat && '' !== $board ) {
+					$map[ mb_strtolower( $cat ) ] = $board;
+				}
+			}
+		}
+		foreach ( $categories as $cat ) {
+			$key = mb_strtolower( trim( (string) $cat ) );
+			if ( isset( $map[ $key ] ) ) {
+				return $map[ $key ];
+			}
+		}
+		return (string) self::get( 'default_board' );
 	}
 
 	public static function pinterest_verify(): string {
@@ -234,6 +305,25 @@ final class SocialSync_Settings {
 		if ( $pin_old !== $pin['code'] ) {
 			SocialSync_Logger::info( 'settings.pinterest_verify', 'Đổi mã xác minh Pinterest', array( 'old' => $pin_old, 'new' => $pin['code'] ) );
 		}
+
+		$out['approval']    = 'auto' === ( $in['approval'] ?? '' ) ? 'auto' : 'required';
+		$out['approve_url'] = esc_url_raw( trim( (string) ( $in['approve_url'] ?? '' ) ), array( 'http', 'https' ) ) ?: $def['approve_url'];
+		$out['report_url']  = esc_url_raw( trim( (string) ( $in['report_url'] ?? '' ) ), array( 'http', 'https' ) ) ?: $def['report_url'];
+		foreach ( array( 'window_start', 'window_end' ) as $key ) {
+			$v           = trim( (string) ( $in[ $key ] ?? '' ) );
+			$out[ $key ] = preg_match( '/^([01]?\d|2[0-3]):[0-5]\d$/', $v ) ? $v : $def[ $key ];
+		}
+		$out['max_per_day'] = array();
+		foreach ( self::CHANNELS as $channel => $label ) {
+			$out['max_per_day'][ $channel ] = max( 1, min( 100, (int) ( $in['max_per_day'][ $channel ] ?? $def['max_per_day'][ $channel ] ) ) );
+		}
+		$out['min_gap']            = max( 0, min( 1440, (int) ( $in['min_gap'] ?? $def['min_gap'] ) ) );
+		$out['blocked_categories'] = sanitize_text_field( (string) ( $in['blocked_categories'] ?? '' ) );
+		$out['block_pdf_title']    = empty( $in['block_pdf_title'] ) ? 0 : 1;
+		$out['board_map']          = sanitize_textarea_field( (string) ( $in['board_map'] ?? '' ) );
+		$out['default_board']      = sanitize_text_field( (string) ( $in['default_board'] ?? '' ) );
+		$out['product_disclaimer'] = sanitize_text_field( (string) ( $in['product_disclaimer'] ?? '' ) );
+		$out['preview_source']     = esc_url_raw( trim( (string) ( $in['preview_source'] ?? '' ) ), array( 'https' ) ) ?: $def['preview_source'];
 
 		$level              = (string) ( $in['log_level'] ?? 'debug' );
 		$out['log_level']    = in_array( $level, self::LOG_LEVELS, true ) ? $level : 'debug';

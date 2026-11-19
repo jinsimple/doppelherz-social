@@ -69,6 +69,11 @@ Write-Step 'Nap luong bao loi n8n/workflows/socialsync-error.json'
 docker exec shop-n8n-1 n8n import:workflow --input=/files/workflows/socialsync-error.json
 if ($LASTEXITCODE -ne 0) { throw "import:workflow (bao loi) loi, exit $LASTEXITCODE" }
 
+# 3a2. Nap luong bao cao tuan (lich thu Hai 08:00 + webhook socialsync/report)
+Write-Step 'Nap luong bao cao n8n/workflows/socialsync-report.json'
+docker exec shop-n8n-1 n8n import:workflow --input=/files/workflows/socialsync-report.json
+if ($LASTEXITCODE -ne 0) { throw "import:workflow (bao cao) loi, exit $LASTEXITCODE" }
+
 # 3b. Nap luong chinh. Dia chi webhook Make (MAKE_PINTEREST_WEBHOOK) khong nam trong repo: chen vao ban sao tam
 #    cua file luong thay cho chuoi giu cho __MAKE_PINTEREST_WEBHOOK__, nap ban sao, roi xoa.
 $makeHook = Read-EnvValue 'MAKE_PINTEREST_WEBHOOK' -Optional
@@ -101,6 +106,9 @@ finally {
 Write-Step 'Publish luong SocialSyncError01 (khong bat buoc)'
 docker exec shop-n8n-1 n8n publish:workflow --id=SocialSyncError01
 if ($LASTEXITCODE -ne 0) { Write-Step "Ghi chu: publish luong bao loi tra exit $LASTEXITCODE (Error Trigger thuong khong can publish)" }
+Write-Step 'Publish luong SocialSyncReport01'
+docker exec shop-n8n-1 n8n publish:workflow --id=SocialSyncReport01
+if ($LASTEXITCODE -ne 0) { throw "publish:workflow (bao cao) loi, exit $LASTEXITCODE" }
 Write-Step 'Publish luong SocialSyncMain01'
 docker exec shop-n8n-1 n8n publish:workflow --id=SocialSyncMain01
 if ($LASTEXITCODE -ne 0) { throw "publish:workflow loi, exit $LASTEXITCODE" }

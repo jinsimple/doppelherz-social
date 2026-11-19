@@ -124,6 +124,59 @@ final class SocialSync_Dispatcher {
 		}
 		foreach ( $jobs as $i => $job ) {
 			$jobs[ $i ]['delay_minutes'] = max( 0, $delay_override );
+			$jobs[ $i ]['immediate']     = true;
+		}
+		return $jobs;
+	}
+
+	/**
+	 * Chọn giờ đăng cho từng lượt (SocialSync_Scheduler), ghi vào bảng và vào dữ liệu gửi n8n.
+	 * Lượt "immediate" (bấm Đồng bộ lại) đăng ngay, không tự rải.
+	 */
+	private static function plan_jobs( int $post_id, array $jobs ): array {
+		global $wpdb;
+		// Nhiều bài xuất bản cùng lúc chạy song song ở các tiến trình nền: khóa để lần xếp lịch sau
+		// thấy giờ mà lần trước vừa giữ chỗ (đo ngày 19/11/2026: không khóa thì 2 bài cùng nhận 20:04).
+		$t0     = microtime( true );
+		$locked = (int) $wpdb->get_var( "SELECT GET_LOCK('socialsync_schedule', 10)" );
+		SocialSync_Logger::debug( 'schedule.lock', $locked ? 'Đã lấy khóa xếp lịch' : 'KHÔNG lấy được khóa xếp lịch sau 10 giây, vẫn xếp', array( 'post_id' => $post_id, 'wait_ms' => (int) round( ( microtime( true ) - $t0 ) * 1000 ) ) );
+		try {
+			return self::plan_jobs_locked( $post_id, $jobs );
+		} finally {
+			if ( $locked ) {
+				$wpdb->query( "SELECT RELEASE_LOCK('socialsync_schedule')" );
+			}
+		}
+	}
+
+	private static function plan_jobs_locked( int $post_id, array $jobs ): array {
+		foreach ( $jobs as $i => $job ) {
+			if ( ! empty( $job['immediate'] ) ) {
+				$plan = array(
+					'ts'     => time(),
+					'source' => 'immediate',
+					'steps'  => array( 'Đồng bộ lại: đăng ngay' ),
+				);
+			} else {
+				$plan = SocialSync_Scheduler::plan( $post_id, (string) $job['channel'], (int) $job['job_id'] );
+			}
+			// Ghi giờ dự kiến ngay để lượt sau của cùng kênh tính được khoảng cách.
+			SocialSync_DB::update_jobs( array( (int) $job['job_id'] ), array( 'scheduled_at' => gmdate( 'Y-m-d H:i:s', $plan['ts'] ) ) );
+			$jobs[ $i ]['scheduled_at']    = gmdate( 'c', $plan['ts'] );
+			$jobs[ $i ]['schedule_source'] = $plan['source'];
+			$jobs[ $i ]['delay_minutes']   = max( 0, (int) round( ( $plan['ts'] - time() ) / 60 ) );
+			unset( $jobs[ $i ]['immediate'] );
+			SocialSync_Logger::info(
+				'schedule.planned',
+				'Chọn giờ đăng ' . SocialSync_Scheduler::fmt( $plan['ts'] ),
+				array(
+					'post_id' => $post_id,
+					'job_id'  => (int) $job['job_id'],
+					'channel' => (string) $job['channel'],
+					'source'  => $plan['source'],
+					'steps'   => $plan['steps'],
+				)
+			);
 		}
 		return $jobs;
 	}
@@ -137,6 +190,7 @@ final class SocialSync_Dispatcher {
 		$job_ids = array_column( $jobs, 'job_id' );
 
 		try {
+			$jobs    = self::plan_jobs( $post_id, $jobs );
 			$payload = SocialSync_Payload::build( $post_id, $jobs );
 		} catch ( Throwable $e ) {
 			SocialSync_Logger::error(
@@ -229,8 +283,8 @@ final class SocialSync_Dispatcher {
 	 * @param array<string, mixed> $log_ids post_id / job_ids để gắn vào log.
 	 * @return array{ok:bool, code:int, ms:int, execution_id:mixed, json:mixed, error:?string}
 	 */
-	public static function send( array $payload, array $log_ids ): array {
-		$url    = SocialSync_Settings::webhook_url();
+	public static function send( array $payload, array $log_ids, ?string $url = null ): array {
+		$url    = null !== $url ? $url : SocialSync_Settings::webhook_url();
 		$secret = SocialSync_Settings::secret();
 		$result = array(
 			'ok'           => false,
@@ -326,7 +380,8 @@ final class SocialSync_Dispatcher {
 			)
 		);
 
-		if ( $code >= 200 && $code < 300 && $is_json_object && ! empty( $json['ok'] ) ) {
+		// Webhook n8n kiểu "trả lời ngay khi nhận" (lệnh đăng sau duyệt, báo cáo) trả {"message":"Workflow was started"}.
+		if ( $code >= 200 && $code < 300 && $is_json_object && ( ! empty( $json['ok'] ) || 'Workflow was started' === ( $json['message'] ?? '' ) ) ) {
 			$result['ok'] = true;
 			return $result;
 		}

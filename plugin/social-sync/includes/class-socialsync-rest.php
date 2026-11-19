@@ -67,6 +67,42 @@ final class SocialSync_REST {
 		);
 		register_rest_route(
 			self::NS,
+			'/previews/(?P<id>\d+)',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'preview_result' ),
+				'permission_callback' => array( __CLASS__, 'auth' ),
+			)
+		);
+		register_rest_route(
+			self::NS,
+			'/report',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'report_data' ),
+				'permission_callback' => array( __CLASS__, 'auth' ),
+			)
+		);
+		register_rest_route(
+			self::NS,
+			'/metrics',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'save_metrics' ),
+				'permission_callback' => array( __CLASS__, 'auth' ),
+			)
+		);
+		register_rest_route(
+			self::NS,
+			'/reports',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'save_report' ),
+				'permission_callback' => array( __CLASS__, 'auth' ),
+			)
+		);
+		register_rest_route(
+			self::NS,
 			'/dispatch',
 			array(
 				'methods'             => 'POST',
@@ -181,6 +217,13 @@ final class SocialSync_REST {
 				$fields['content_source'] = $body['content_source'];
 			} else {
 				$problems[] = 'content_source phải là ai hoặc template';
+			}
+		}
+		if ( array_key_exists( 'classification', $body ) ) {
+			if ( null === $body['classification'] || in_array( $body['classification'], array( 'E', 'P', 'N', 'X' ), true ) ) {
+				$fields['classification'] = $body['classification'];
+			} else {
+				$problems[] = 'classification phải là E, P, N hoặc X';
 			}
 		}
 		if ( array_key_exists( 'visibility', $body ) ) {
@@ -318,6 +361,8 @@ final class SocialSync_REST {
 				'job_id'        => (int) $row['id'],
 				'channel'       => (string) $row['channel'],
 				'delay_minutes' => isset( $body['delay_override'] ) ? max( 0, (int) $body['delay_override'] ) : SocialSync_Settings::delay( (string) $row['channel'] ),
+				// Bấm "Đồng bộ lại" gửi delay_override = 0: đăng ngay, không tự rải lịch.
+				'immediate'     => isset( $body['delay_override'] ),
 			);
 		}
 
@@ -377,6 +422,96 @@ final class SocialSync_REST {
 		SocialSync_Logger::error( 'n8n.execution_failed.applied', 'Chuyển các lượt còn mở sang failed', $log + array( 'failed_jobs' => $open, 'closed' => $closed ) );
 
 		return self::reply( 200, array( 'ok' => true, 'failed_jobs' => $open, 'closed' => $closed ) );
+	}
+
+	/** n8n gửi kết quả chạy thử (AI viết + kiểm tra, không đăng) của một bài nguồn. */
+	public static function preview_result( WP_REST_Request $req ): WP_REST_Response {
+		global $wpdb;
+		$id   = (int) $req['id'];
+		$body = $req->get_json_params();
+		$body = is_array( $body ) ? $body : array();
+		$cls  = in_array( $body['classification'] ?? null, array( 'E', 'P', 'N', 'X' ), true ) ? $body['classification'] : null;
+		$ok   = ! empty( $body['ok'] );
+		$data = array(
+			'status'         => $ok ? 'done' : 'failed',
+			'classification' => $cls,
+			'result'         => wp_json_encode( $body['result'] ?? null, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ),
+			'error'          => isset( $body['error'] ) ? mb_substr( wp_strip_all_tags( (string) $body['error'] ), 0, 2000 ) : null,
+			'tokens_in'      => isset( $body['tokens_in'] ) ? absint( $body['tokens_in'] ) : null,
+			'tokens_out'     => isset( $body['tokens_out'] ) ? absint( $body['tokens_out'] ) : null,
+			'ai_ms'          => isset( $body['ai_ms'] ) ? absint( $body['ai_ms'] ) : null,
+			'updated_at'     => SocialSync_DB::now(),
+		);
+		$rows = $wpdb->update( SocialSync_DB::previews_table(), $data, array( 'id' => $id ) );
+		SocialSync_Logger::write(
+			false === $rows || 0 === $rows ? 'warn' : 'info',
+			'preview.result',
+			false === $rows || 0 === $rows ? 'Không ghi được kết quả chạy thử (không có dòng này?)' : 'Nhận kết quả chạy thử',
+			array(
+				'preview_id'     => $id,
+				'ok'             => $ok,
+				'classification' => $cls,
+				'tokens'         => array( $data['tokens_in'], $data['tokens_out'] ),
+				'ai_ms'          => $data['ai_ms'],
+				'error'          => $data['error'],
+				'rows'           => $rows,
+				'db_error'       => false === $rows ? $wpdb->last_error : null,
+			)
+		);
+		return self::reply( $rows ? 200 : 404, array( 'ok' => (bool) $rows ) );
+	}
+
+	/** Số liệu cho luồng báo cáo của n8n. */
+	public static function report_data( WP_REST_Request $req ): WP_REST_Response {
+		$days = max( 1, min( 90, (int) ( $req->get_param( 'days' ) ?? 7 ) ) );
+		$data = SocialSync_Report::stats( $days );
+		SocialSync_Logger::info( 'report.data', 'n8n lấy số liệu báo cáo', array( 'days' => $days, 'fb_posts' => count( $data['facebook_posts'] ) ) );
+		return self::reply( 200, array( 'ok' => true ) + $data );
+	}
+
+	/** n8n gửi số liệu tương tác: {"items":[{"job_id":1,"metrics":{...}}]} */
+	public static function save_metrics( WP_REST_Request $req ): WP_REST_Response {
+		$body  = $req->get_json_params();
+		$items = is_array( $body['items'] ?? null ) ? $body['items'] : array();
+		$saved = 0;
+		foreach ( $items as $item ) {
+			$job_id = (int) ( $item['job_id'] ?? 0 );
+			if ( $job_id <= 0 || ! is_array( $item['metrics'] ?? null ) ) {
+				continue;
+			}
+			$m = array_map( 'intval', array_intersect_key( $item['metrics'], array_flip( array( 'reactions', 'comments', 'shares' ) ) ) );
+			SocialSync_DB::update_jobs(
+				array( $job_id ),
+				array(
+					'metrics'    => wp_json_encode( $m ),
+					'metrics_at' => SocialSync_DB::now(),
+				)
+			);
+			++$saved;
+		}
+		SocialSync_Logger::info( 'report.metrics', 'Lưu số liệu tương tác', array( 'received' => count( $items ), 'saved' => $saved ) );
+		return self::reply( 200, array( 'ok' => true, 'saved' => $saved ) );
+	}
+
+	/** n8n gửi báo cáo tuần đã tóm tắt. Giữ 10 báo cáo gần nhất. */
+	public static function save_report( WP_REST_Request $req ): WP_REST_Response {
+		$body   = $req->get_json_params();
+		$body   = is_array( $body ) ? $body : array();
+		$report = array(
+			'created_at' => SocialSync_DB::now(),
+			'days'       => (int) ( $body['days'] ?? 7 ),
+			'summary'    => mb_substr( wp_strip_all_tags( (string) ( $body['summary'] ?? '' ) ), 0, 5000 ),
+			'source'     => sanitize_text_field( (string) ( $body['source'] ?? '' ) ),
+			'model'      => sanitize_text_field( (string) ( $body['model'] ?? '' ) ),
+			'error'      => isset( $body['error'] ) ? mb_substr( wp_strip_all_tags( (string) $body['error'] ), 0, 1000 ) : null,
+			'execution'  => sanitize_text_field( (string) ( $body['execution_id'] ?? '' ) ),
+		);
+		$all = get_option( 'socialsync_reports', array() );
+		$all = is_array( $all ) ? $all : array();
+		array_unshift( $all, $report );
+		update_option( 'socialsync_reports', array_slice( $all, 0, 10 ), false );
+		SocialSync_Logger::info( 'report.saved', 'Lưu báo cáo tuần', array_diff_key( $report, array( 'summary' => 1 ) ) + array( 'summary_chars' => mb_strlen( $report['summary'] ) ) );
+		return self::reply( 200, array( 'ok' => true ) );
 	}
 
 	/**

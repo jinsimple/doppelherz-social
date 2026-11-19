@@ -70,6 +70,13 @@ final class SocialSync_Payload {
 			'published_at'   => (string) get_post_time( 'c', false, $post ),
 			'jobs'           => array_values( $jobs ),
 			'callback_url'   => SocialSync_Settings::callback_url(),
+			// AI viết xong thì chờ người duyệt (true) hay đăng theo lịch luôn (false).
+			'approval_required' => SocialSync_Settings::approval_required(),
+			'pinterest_board'   => SocialSync_Settings::board_for( (array) $categories ),
+			// Quy tắc nội dung do WordPress quản lý, n8n chỉ áp dụng.
+			'rules'             => array(
+				'product_disclaimer' => (string) SocialSync_Settings::get( 'product_disclaimer' ),
+			),
 		);
 
 		SocialSync_Logger::info(
@@ -88,6 +95,9 @@ final class SocialSync_Payload {
 				'image'         => $image,
 				'categories'    => $payload['categories'],
 				'price'         => $payload['price'],
+				'approval'      => $payload['approval_required'] ? 'cần duyệt' : 'tự đăng',
+				'board'         => $payload['pinterest_board'],
+				'schedule'      => array_map( static fn( $j ) => array( $j['channel'] => $j['scheduled_at'] ?? null ), $jobs ),
 			)
 		);
 

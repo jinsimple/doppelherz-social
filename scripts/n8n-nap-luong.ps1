@@ -1,4 +1,4 @@
-# Nap credential + luong SocialSync vao n8n, roi publish.
+﻿# Nap credential + luong SocialSync vao n8n, roi publish.
 # Chay tu thu muc du an:  powershell -ExecutionPolicy Bypass -File scripts\n8n-nap-luong.ps1
 # Chay lai bao nhieu lan cung duoc: credential va luong co ID co dinh nen se bi ghi de.
 #
@@ -54,10 +54,33 @@ finally {
   if (Test-Path $tmp) { Remove-Item $tmp -Force; Write-Step 'Da xoa file credential tam' }
 }
 
-# 3. Nap luong
-Write-Step 'Nap luong n8n/workflows/socialsync-main.json'
-docker exec shop-n8n-1 n8n import:workflow --input=/files/workflows/socialsync-main.json
-if ($LASTEXITCODE -ne 0) { throw "import:workflow loi, exit $LASTEXITCODE" }
+# 3. Nap luong. Dia chi webhook Make (MAKE_PINTEREST_WEBHOOK) khong nam trong repo: chen vao ban sao tam
+#    cua file luong thay cho chuoi giu cho __MAKE_PINTEREST_WEBHOOK__, nap ban sao, roi xoa.
+$makeHook = Read-EnvValue 'MAKE_PINTEREST_WEBHOOK' -Optional
+$wfSrc = Join-Path $root 'n8n\workflows\socialsync-main.json'
+$wfTmp = Join-Path $root 'n8n\.tmp-workflow.json'
+$wfText = [System.IO.File]::ReadAllText($wfSrc, (New-Object System.Text.UTF8Encoding($false)))
+$placeholder = '__MAKE_PINTEREST_WEBHOOK__'
+$hits = ([regex]::Matches($wfText, [regex]::Escape($placeholder))).Count
+Write-Step ("Chuoi giu cho webhook Make trong file luong: {0} cho" -f $hits)
+if ($hits -ne 1) { throw "Chuoi giu cho phai xuat hien dung 1 lan (URL cua khoi 'Pinterest: gui sang Make'), dang co $hits" }
+if ($makeHook) {
+  if ($makeHook -notmatch '^https://[^/\s"]+/[^\s"]+$') { throw 'MAKE_PINTEREST_WEBHOOK trong .env khong phai dia chi https hop le' }
+  $hookHost = ([uri]$makeHook).Host
+  Write-Step ("MAKE_PINTEREST_WEBHOOK: host {0}, {1} ky tu (khong in duong dan)" -f $hookHost, $makeHook.Length)
+  $wfText = $wfText.Replace($placeholder, $makeHook)
+} else {
+  Write-Step 'CANH BAO: chua co MAKE_PINTEREST_WEBHOOK trong .env. Luot Pinterest se bao "failed" kem huong dan.'
+}
+try {
+  [System.IO.File]::WriteAllText($wfTmp, $wfText, (New-Object System.Text.UTF8Encoding($false)))
+  Write-Step 'Nap luong (ban sao tam cua n8n/workflows/socialsync-main.json)'
+  docker exec shop-n8n-1 n8n import:workflow --input=/files/.tmp-workflow.json
+  if ($LASTEXITCODE -ne 0) { throw "import:workflow loi, exit $LASTEXITCODE" }
+}
+finally {
+  if (Test-Path $wfTmp) { Remove-Item $wfTmp -Force; Write-Step 'Da xoa file luong tam' }
+}
 
 # 4. Publish
 Write-Step 'Publish luong SocialSyncMain01'

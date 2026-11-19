@@ -1,5 +1,7 @@
 # Giu xuong dong LF cho code chay trong container Linux; PowerShell giu CRLF.
 * text=auto eol=lf
 *.ps1 text eol=crlf
+# Du lieu nghien cuu giu nguyen tung byte de khop ma sha256 trong research/MANIFEST.csv
+research/** -text
 *.jpg binary
 *.png binary

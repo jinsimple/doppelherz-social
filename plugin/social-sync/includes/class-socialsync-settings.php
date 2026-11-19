@@ -46,6 +46,8 @@ final class SocialSync_Settings {
 			'dispatch_mode' => 'async',
 			// Địa chỉ trình soạn n8n, để tạo link tới từng lượt chạy trong trang Nhật ký.
 			'n8n_editor'    => 'https://n8n.adaptivealgo.uk',
+			// Mã xác minh website của Pinterest (thẻ meta p:domain_verify). Không phải bí mật: ai xem mã nguồn trang cũng thấy.
+			'pinterest_verify' => '',
 			'log_level'     => 'debug',
 			'log_requests'  => 0,
 			'log_http'      => 0,
@@ -120,6 +122,35 @@ final class SocialSync_Settings {
 		return max( 2, min( 30, (int) self::get( 'timeout' ) ) );
 	}
 
+	public static function pinterest_verify(): string {
+		return (string) self::get( 'pinterest_verify' );
+	}
+
+	/**
+	 * Nhận cả thẻ meta dán nguyên khối lẫn riêng phần mã, trả về mã đã làm sạch.
+	 * Ví dụ: <meta name="p:domain_verify" content="abc123"/>  →  abc123
+	 *
+	 * @return array{code:string, note:string} note khác rỗng khi đầu vào có vấn đề.
+	 */
+	public static function parse_pinterest_verify( string $raw ): array {
+		$raw = trim( $raw );
+		if ( '' === $raw ) {
+			return array( 'code' => '', 'note' => '' );
+		}
+		$candidate = $raw;
+		if ( preg_match( '/content\s*=\s*["\']([^"\']*)["\']/i', $raw, $m ) ) {
+			$candidate = $m[1];
+		} elseif ( false !== strpos( $raw, '<' ) ) {
+			return array( 'code' => '', 'note' => 'Đã dán thẻ HTML nhưng không tìm thấy thuộc tính content="...".' );
+		}
+		$code = preg_replace( '/[^A-Za-z0-9_\-]/', '', $candidate );
+		if ( '' === $code ) {
+			return array( 'code' => '', 'note' => 'Mã xác minh rỗng sau khi bỏ ký tự lạ.' );
+		}
+		$note = $code !== $candidate ? 'Đã bỏ các ký tự không hợp lệ khỏi mã.' : '';
+		return array( 'code' => $code, 'note' => $note );
+	}
+
 	public static function log_level(): string {
 		$level = (string) self::get( 'log_level' );
 		return in_array( $level, self::LOG_LEVELS, true ) ? $level : 'debug';
@@ -190,7 +221,21 @@ final class SocialSync_Settings {
 		$out['timeout']       = max( 2, min( 30, (int) ( $in['timeout'] ?? $def['timeout'] ) ) );
 		$out['dispatch_mode'] = 'sync' === ( $in['dispatch_mode'] ?? '' ) ? 'sync' : 'async';
 		$out['n8n_editor']    = esc_url_raw( trim( (string) ( $in['n8n_editor'] ?? '' ) ), array( 'http', 'https' ) );
-		$level               = (string) ( $in['log_level'] ?? 'debug' );
+
+		$pin_old                 = self::pinterest_verify();
+		$pin                     = self::parse_pinterest_verify( (string) ( $in['pinterest_verify'] ?? '' ) );
+		$out['pinterest_verify'] = $pin['code'];
+		if ( '' !== $pin['note'] ) {
+			SocialSync_Logger::warn( 'settings.pinterest_verify', $pin['note'], array( 'raw_len' => strlen( (string) ( $in['pinterest_verify'] ?? '' ) ), 'code_len' => strlen( $pin['code'] ) ) );
+			if ( function_exists( 'add_settings_error' ) ) {
+				add_settings_error( self::OPTION, 'pinterest_verify', 'Mã xác minh Pinterest: ' . $pin['note'], '' === $pin['code'] ? 'error' : 'warning' );
+			}
+		}
+		if ( $pin_old !== $pin['code'] ) {
+			SocialSync_Logger::info( 'settings.pinterest_verify', 'Đổi mã xác minh Pinterest', array( 'old' => $pin_old, 'new' => $pin['code'] ) );
+		}
+
+		$level              = (string) ( $in['log_level'] ?? 'debug' );
 		$out['log_level']    = in_array( $level, self::LOG_LEVELS, true ) ? $level : 'debug';
 		$out['log_requests'] = empty( $in['log_requests'] ) ? 0 : 1;
 		$out['log_http']     = empty( $in['log_http'] ) ? 0 : 1;

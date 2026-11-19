@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       SocialSync
  * Description:       Báo cho n8n mỗi khi có bài viết hoặc sản phẩm mới được xuất bản, để n8n đồng bộ lên Facebook Fanpage và Pinterest. Ghi log chi tiết từng bước.
- * Version:           0.2.0
+ * Version:           0.2.1
  * Requires at least: 6.5
  * Requires PHP:      8.1
  * Author:            SocialSync demo
@@ -11,11 +11,12 @@
  *
  * Nấc 1: bắt sự kiện xuất bản, chống đăng trùng, gửi dữ liệu bài sang n8n, log chi tiết, trang cấu hình.
  * Nấc 1b: gửi sang n8n bằng tiến trình nền, địa chỉ REST nhận kết quả từ n8n, trang Nhật ký đồng bộ.
+ * 0.2.1: ô "Mã xác minh Pinterest", in thẻ p:domain_verify vào <head> để claim website trên Pinterest.
  */
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SOCIALSYNC_VERSION', '0.2.0' );
+define( 'SOCIALSYNC_VERSION', '0.2.1' );
 define( 'SOCIALSYNC_DB_VERSION', '1' );
 define( 'SOCIALSYNC_FILE', __FILE__ );
 define( 'SOCIALSYNC_DIR', __DIR__ );
@@ -30,6 +31,7 @@ require_once SOCIALSYNC_DIR . '/includes/class-socialsync-diagnostics.php';
 require_once SOCIALSYNC_DIR . '/includes/class-socialsync-rest.php';
 require_once SOCIALSYNC_DIR . '/includes/class-socialsync-admin.php';
 require_once SOCIALSYNC_DIR . '/includes/class-socialsync-log-page.php';
+require_once SOCIALSYNC_DIR . '/includes/class-socialsync-site-meta.php';
 
 register_activation_hook( __FILE__, 'socialsync_activate' );
 register_deactivation_hook( __FILE__, 'socialsync_deactivate' );
@@ -52,6 +54,7 @@ function socialsync_boot(): void {
 	SocialSync_Diagnostics::init();
 	SocialSync_Publish_Hook::init();
 	SocialSync_REST::init();
+	SocialSync_Site_Meta::init();
 
 	if ( is_admin() ) {
 		SocialSync_Admin::init();

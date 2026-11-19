@@ -158,6 +158,13 @@ final class SocialSync_Admin {
 						</td>
 					</tr>
 					<tr>
+						<th scope="row"><label for="ss-pin-verify">Mã xác minh Pinterest</label></th>
+						<td>
+							<input id="ss-pin-verify" type="text" class="regular-text code" name="<?php echo esc_attr( SocialSync_Settings::OPTION ); ?>[pinterest_verify]" value="<?php echo esc_attr( SocialSync_Settings::pinterest_verify() ); ?>">
+							<p class="description">Dán nguyên thẻ <code>&lt;meta name="p:domain_verify" content="..."/&gt;</code> lấy từ Pinterest (Cài đặt → Tài khoản đã xác nhận → Trang web), hoặc chỉ phần mã. Plugin sẽ in thẻ này vào <code>&lt;head&gt;</code> mọi trang. Để trống để gỡ.</p>
+						</td>
+					</tr>
+					<tr>
 						<th scope="row">Log</th>
 						<td>
 							<p>
@@ -214,7 +221,8 @@ final class SocialSync_Admin {
 				'option'   => 'có, nhập trong trang này',
 				'none'     => 'CHƯA CÓ',
 			)[ SocialSync_Settings::secret_source() ],
-			'Kênh đang bật'             => implode( ', ', SocialSync_Settings::enabled_channels() ) ?: 'không có',
+			'Thẻ xác minh Pinterest'    => '' !== SocialSync_Settings::pinterest_verify() ? 'đang in vào <head> (' . strlen( SocialSync_Settings::pinterest_verify() ) . ' ký tự)' : 'chưa có',
+			'Kênh đang bật'             =>implode( ', ', SocialSync_Settings::enabled_channels() ) ?: 'không có',
 			'Loại nội dung đồng bộ'     => implode( ', ', SocialSync_Settings::post_types() ) ?: 'không có',
 			'WooCommerce'               => class_exists( 'WooCommerce' ) ? 'đang chạy' : 'không chạy',
 			'Thư mục log ghi được'      => is_writable( $log_dir ) ? 'có' : 'KHÔNG (' . $log_dir . ')',

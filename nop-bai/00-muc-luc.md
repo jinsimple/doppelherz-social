@@ -11,6 +11,8 @@ Bộ tài liệu trả lời đầy đủ Câu 1 và 7 mục của Câu 2. Sản
 | 2.4 Sơ đồ quy trình | [04-so-do-quy-trinh.md](04-so-do-quy-trinh.md) | Kiến trúc, luồng một bài, luồng n8n, vòng đời lượt, màn hình; bản chính thức đề xuất |
 | 2.5 Bộ prompt | [05-bo-prompt.md](05-bo-prompt.md) | Prompt đang chạy (nguyên văn) + prompt bổ sung cho bản chính thức + kết quả kiểm thử |
 | 2.6 Sản phẩm chạy thật | [06-san-pham-chay-that.md](06-san-pham-chay-that.md) | Địa chỉ, cách dùng thử 5 phút, những gì đã kiểm chứng, giới hạn |
+| 2.6 (kèm) Hướng dẫn từng bước có ảnh | [08-huong-dan-tung-buoc.md](08-huong-dan-tung-buoc.md) | Một lần chạy thật 20/11 với bài thật của doppelherz.vn: 16 ảnh từ lúc viết bài đến lúc lên Facebook (7 giây sau duyệt) và Pin vào board Làm đẹp (11 giây) |
+| 2.6 (kèm) Kiểm thử | [../kiem-thu/testcase-trung-tam-socialsync.md](../kiem-thu/testcase-trung-tam-socialsync.md) | Bộ testcase và kết quả kiểm thử Trung tâm SocialSync: 192 testcase, 75 đạt, 16 lỗi đã sửa |
 | 2.7 Lộ trình mở rộng | [07-lo-trinh-mo-rong.md](07-lo-trinh-mo-rong.md) | 6 giai đoạn từ Q1/2027, điều kiện chuyển giai đoạn, quản trị chương trình |
 
 Tài liệu nền:

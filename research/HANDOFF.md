@@ -70,10 +70,10 @@ Mã danh mục dùng cho bộ lọc:
 - Khóa API và token đặt trong biến môi trường, không ghi vào repo.
 
 ## 5. Ràng buộc bắt buộc cho prompt và bộ kiểm tuân thủ
-Đây là đề xuất kỹ thuật rút từ nguồn thứ cấp, **không thay cho ý kiến pháp chế**. Đặt thành file cấu hình để pháp chế sửa được.
+Đây là đề xuất kỹ thuật rút từ nguồn thứ cấp, **không thay cho ý kiến pháp lý**. Đặt thành file cấu hình để người phụ trách pháp lý quảng cáo (khách chỉ định) [Giả định] sửa được.
 1. Bài loại P chỉ dùng công dụng nguyên văn trong cột `excerpt` của `doppelherz_san_pham_xnqc.csv`; kèm cụm "Thực phẩm bảo vệ sức khỏe", số XNQC và câu "Thực phẩm này không phải là thuốc và không có tác dụng thay thế thuốc chữa bệnh."
 2. AI chỉ viết lại từ bài gốc: không thêm số liệu, nghiên cứu, liều dùng, công dụng.
-3. Từ chặn (danh sách khởi đầu, cần pháp chế bổ sung): chữa, điều trị, đặc trị, khỏi hẳn, dứt điểm, 100%, cam kết, thần dược, hết bệnh; so sánh nhất (số 1, tốt nhất, duy nhất) chỉ dùng khi có tài liệu của khách hàng.
+3. Từ chặn (danh sách khởi đầu, cần người phụ trách pháp lý bổ sung): chữa, điều trị, đặc trị, khỏi hẳn, dứt điểm, 100%, cam kết, thần dược, hết bệnh; so sánh nhất (số 1, tốt nhất, duy nhất) chỉ dùng khi có tài liệu của khách hàng.
 4. Không hình ảnh hay danh nghĩa bác sĩ, dược sĩ, cơ sở y tế, lời cảm ơn/chứng thực của người bệnh. Prompt sinh ảnh cấm áo blouse, bệnh viện.
 5. Câu mở không gán tình trạng sức khỏe cho người đọc. Không ngôn ngữ/hình ảnh giảm cân, không before–after.
 6. Sản phẩm cho trẻ em và phụ nữ mang thai: luôn hai lớp duyệt.

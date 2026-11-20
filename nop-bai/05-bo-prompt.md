@@ -234,10 +234,10 @@ SCHEMA: {"bo_cuc": "A|B|C", "chu": {"...": "..."}}
 | 5 bài mới nhất của doppelherz.vn (chạy thử) | Phân loại hợp lý, không đăng | **Đạt**: 2 bài chặn theo "Tin nội bộ"; danh sách trúng thưởng cho đại lý → X; 2 tin hội thảo, đào tạo → N |
 | API key sai | Mẫu cố định + lý do | **Đạt**: "HTTP 401" |
 
-Bộ bài thử đặt cố định. Mỗi lần sửa prompt thì chạy lại toàn bộ và so sánh kết quả, không sửa theo cảm tính. Với doanh nghiệp thật, bộ này mở rộng thành 20 bài mẫu do Marketing và pháp chế chọn.
+Bộ bài thử đặt cố định. Mỗi lần sửa prompt thì chạy lại toàn bộ và so sánh kết quả, không sửa theo cảm tính. Với doanh nghiệp thật, bộ này mở rộng thành 20 bài mẫu do Marketing và người phụ trách pháp lý (khách chỉ định) [Giả định] chọn.
 
 ## Nguồn
 - Prompt và code kiểm tra: `n8n/workflows/socialsync-main.json` (khối "AI: dựng yêu cầu", "AI: kiểm tra và áp nội dung"), `n8n/workflows/socialsync-report.json` (khối "Dựng yêu cầu tóm tắt")
 - Kết quả kiểm thử: nhật ký `logs/social-sync.log`, bảng `wp_socialsync_jobs` và `wp_socialsync_previews`, ngày 19/11/2026
-- Ràng buộc ngành và sổ XNQC: `research/02_template_3_kenh_va_huong_prototype.md` mục 2 và 4, `research/doppelherz_san_pham_xnqc.csv`. Phần pháp lý là tóm tắt từ nguồn thứ cấp, không thay cho ý kiến pháp chế của doanh nghiệp.
+- Ràng buộc ngành và sổ XNQC: `research/02_template_3_kenh_va_huong_prototype.md` mục 2 và 4, `research/doppelherz_san_pham_xnqc.csv`. Phần pháp lý là tóm tắt từ nguồn thứ cấp, không thay cho ý kiến pháp lý của doanh nghiệp.
 - Ba bố cục Pin: khảo sát kênh Pinterest Doppelherz Đức trong `research/02_template_3_kenh_va_huong_prototype.md` mục 1.3 và 2.3

@@ -32,30 +32,30 @@ Vì vậy, giải pháp đề xuất **không phải "đăng tự động hoàn 
 |---|---|---|---|
 | 1 | **Đăng theo đợt, không theo lịch** | 219 bài trong 12 tháng (11/2025–10/2026). Chỉ 66/342 ngày có bài mới. Khoảng trống dài nhất 39 ngày. Nhiều ngày đăng 9–10 bài cùng lúc. Tháng nhiều nhất 47 bài (04/2026), có tháng 1–2 bài [Đo] | Không thể "có bài là đăng ngay". Cần **hàng đợi + khung giờ đăng rải đều**. Hệ thống phải chịu được đợt 10 bài/ngày |
 | 2 | **Website trộn nội dung người tiêu dùng với thông báo đại lý** | Ngày 25/08/2026 có 46 "bài viết" là file PDF thông báo chương trình bán hàng (ví dụ "Chương trình cân bằng kho ETC"), nằm trong danh mục "Chương trình khuyến mại" [Đo]. Danh mục "Tin nội bộ" có 136 bài [Đo]. Các thông báo này có vẻ dành cho đại lý [Suy luận] | Đồng bộ "mù" sẽ đẩy chính sách đại lý lên fanpage. Bắt buộc **bộ lọc theo loại nội dung** và **bước duyệt** |
-| 3 | **Ràng buộc quảng cáo TPBVSK** | 36/36 trang sản phẩm có câu khuyến cáo "không phải là thuốc"; 34/36 ghi số xác nhận nội dung quảng cáo (XNQC) [Đo]. Mức phạt báo chí nêu cho một lỗi quảng cáo: 20–40 triệu đồng [Nguồn]. Căn cứ pháp lý đang thay đổi trong 2026 (Luật Quảng cáo sửa đổi, NĐ 342/2025) [Nguồn] | AI **không được tự viết công dụng**. Bài sản phẩm chỉ dùng công dụng trong sổ XNQC. Cần **cổng tuân thủ** (luật cứng + rà soát) và **người duyệt**. Bộ luật phải là file cấu hình do pháp chế sửa được |
-| 4 | **Website đã có sẵn "sổ công dụng được phép nói"** | Trang sản phẩm ghi số XNQC, số đăng ký và 2–3 dòng công dụng [Đo] | Cổng tuân thủ có dữ liệu để đối chiếu ngay. Không phải xây sổ mới, chỉ cần pháp chế xác nhận bản đang dùng |
+| 3 | **Ràng buộc quảng cáo TPBVSK** | 36/36 trang sản phẩm có câu khuyến cáo "không phải là thuốc"; 34/36 ghi số xác nhận nội dung quảng cáo (XNQC) [Đo]. Mức phạt báo chí nêu cho một lỗi quảng cáo: 20–40 triệu đồng [Nguồn]. Căn cứ pháp lý đang thay đổi trong 2026 (Luật Quảng cáo sửa đổi, NĐ 342/2025) [Nguồn] | AI **không được tự viết công dụng**. Bài sản phẩm chỉ dùng công dụng trong sổ XNQC. Cần **cổng tuân thủ** (luật cứng + rà soát) và **người duyệt**. Bộ luật phải là file cấu hình do người phụ trách pháp lý quảng cáo (khách chỉ định) [Giả định] sửa được |
+| 4 | **Website đã có sẵn "sổ công dụng được phép nói"** | Trang sản phẩm ghi số XNQC, số đăng ký và 2–3 dòng công dụng [Đo] | Cổng tuân thủ có dữ liệu để đối chiếu ngay. Không phải xây sổ mới, chỉ cần người phụ trách pháp lý xác nhận bản đang dùng |
 | 5 | **Pinterest chưa hiện diện** | Website không có liên kết Pinterest, không cài Pinterest tag (có GTM và Facebook Pixel) [Đo]. Kênh Doppelherz Đức nhỏ (358 người theo dõi) và ngừng đăng từ 07/2025 [Đo] | Pinterest là **kênh phụ, chi phí thấp**. Đặt KPI khiêm tốn. Chưa biết khách đã có tài khoản Pinterest chưa [Chưa xác minh] |
 | 6 | **Pinterest API có rào cản thời gian** | App mới chỉ được Trial access: Pin chỉ người tạo thấy. Muốn công khai phải xin Standard access kèm video demo [Nguồn]. Chờ cấp Trial cũng mất 1–4 tuần theo người dùng diễn đàn [Nguồn] | Phải đưa thời gian chờ vào kế hoạch. Bản demo đã có đường thay thế qua Make.com, Pin công khai |
 | 7 | **Ảnh đại diện là ảnh ngang** | Ảnh phổ biến nhất 600×400 (19/40 bài mẫu), tỉ lệ 3:2 [Đo]. 199/2.125 bài không có ảnh đại diện [Đo] | Pinterest ưu tiên ảnh dọc 2:3 [Suy luận, theo kênh Đức 12/12 Pin là 2:3]. Cần **dựng ảnh Pin dọc theo mẫu**. Bài không ảnh thì bỏ qua Pinterest |
 | 8 | **Không đo được kênh nào mang về đơn** | 0/40 bài có tham số UTM. 40/40 bài dùng link rút gọn bom.so [Đo] | Mọi link hệ thống đăng phải gắn **UTM theo kênh**. Cần hỏi bom.so có giữ được UTM không |
 | 9 | **Kho 2.125 bài cũ chưa được dùng lại** | 1.300 bài thuộc "Kiến thức sức khỏe" [Đo] | Lợi ích lớn nhất của Pinterest có thể đến từ bài cũ, không chỉ bài mới. Để ở giai đoạn sau, nhưng thiết kế phải cho phép |
-| 10 | **Phụ thuộc một tài khoản đăng bài** | Một tài khoản tác giả đứng tên 1.795/2.125 bài (84,5%) [Đo] | Rủi ro vận hành khi người đó vắng. Cần phân quyền rõ, có người dự phòng, đào tạo ít nhất 2 người |
-| 11 | **Fanpage lớn** | Khoảng 628 nghìn người theo dõi [Nguồn – kết quả tìm kiếm]. Chưa đọc được nội dung, tần suất, tương tác của fanpage [Chưa xác minh] | Một bài sai sẽ lan nhanh. Củng cố lý do phải có người duyệt. Cần khách xuất 20–30 bài gần nhất để phân tích giọng văn |
+| 10 | **Phụ thuộc một tài khoản đăng bài** | Một tài khoản tác giả đứng tên 1.795/2.125 bài (84,5%) [Đo] | Nếu đây là tài khoản của một người [Suy luận – hỏi ở B3.5], sẽ có rủi ro khi người đó vắng. Cần phân quyền rõ, có người dự phòng, đào tạo ít nhất 2 người |
+| 11 | **Fanpage có thể lớn** | Khoảng 628 nghìn người theo dõi [Chưa xác minh – kết quả tìm kiếm]. Chưa đọc được nội dung, tần suất, tương tác của fanpage [Chưa xác minh] | Một bài sai sẽ lan nhanh. Củng cố lý do phải có người duyệt. Cần khách xuất 20–30 bài gần nhất để phân tích giọng văn |
 | 12 | **Website dễ tích hợp** | WordPress 6.7.11, theme Flatsome, WooCommerce, Rank Math SEO, chạy sau Cloudflare. REST API và RSS mở công khai [Đo] | Tích hợp bằng plugin mỏng, không sửa giao diện. Cloudflare có thể chặn Facebook/Pinterest tải ảnh [Suy luận] → kiểm tra khi thử |
 | 13 | **Bài gốc không có tài liệu tham khảo** | 0/40 bài mẫu có mục tài liệu tham khảo [Đo] | AI không có gì để đối chiếu số liệu. Quy tắc: AI chỉ viết lại, không thêm số liệu. Khuyến nghị khách bổ sung nguồn trong bài mới |
 | 14 | **Có bài tiếng Anh** | 17 bài thuộc danh mục tiếng Anh trong 12 tháng [Đo] | Bản đầu bỏ qua bài tiếng Anh. Hỏi khách có cần không |
-| 15 | **Dùng cụm so sánh nhất** | Website dùng cụm "số 1 tại Đức" [Đo] | Cụm so sánh nhất cần tài liệu chứng minh [Chưa xác minh – Luật Quảng cáo]. Mặc định chặn, trừ khi khách cung cấp tài liệu và pháp chế cho phép |
+| 15 | **Dùng cụm so sánh nhất** | Website dùng cụm "số 1 tại Đức" [Đo] | Cụm so sánh nhất cần tài liệu chứng minh [Chưa xác minh – Luật Quảng cáo]. Mặc định chặn, trừ khi khách cung cấp tài liệu và người phụ trách pháp lý cho phép |
 
 ### A3. Phân loại nội dung đề xuất (để thảo luận trong buổi khảo sát)
 
 | Loại | Dấu hiệu | Facebook | Pinterest | Mức duyệt |
 |---|---|---|---|---|
 | E – Kiến thức | Danh mục Kiến thức sức khỏe và các danh mục con | Có | Có (ưu tiên) | 1 người duyệt |
-| P – Sản phẩm | Bài/trang có tên sản phẩm + công dụng | Có | Hạn chế | Marketing + pháp chế; chỉ dùng công dụng trong sổ XNQC |
-| N – Tin thương hiệu | Sự kiện, trách nhiệm xã hội, báo chí | Có | Không | 1 người duyệt; bài có hình ảnh/danh nghĩa nhân viên y tế → pháp chế |
+| P – Sản phẩm | Bài/trang có tên sản phẩm + công dụng | Có | Hạn chế | Marketing + người phụ trách pháp lý; chỉ dùng công dụng trong sổ XNQC |
+| N – Tin thương hiệu | Sự kiện, trách nhiệm xã hội, báo chí | Có | Không | 1 người duyệt; bài có hình ảnh/danh nghĩa nhân viên y tế → người phụ trách pháp lý |
 | X – Không đồng bộ | Thông báo cho đại lý (PDF), Tin nội bộ | Không | Không | Chặn tự động |
 
-Sản phẩm cho trẻ em và phụ nữ mang thai: luôn hai lớp duyệt [Suy luận – đề xuất thận trọng, chờ pháp chế quyết].
+Sản phẩm cho trẻ em và phụ nữ mang thai: luôn hai lớp duyệt [Suy luận – đề xuất thận trọng, chờ người phụ trách pháp lý quyết].
 
 ### A4. Bản demo đã chứng minh gì, chưa chứng minh gì
 
@@ -64,14 +64,14 @@ Chúng tôi đã dựng bản demo chạy thật trên website thử nghiệm ht
 | Đã chạy và đo được | Chưa có trong demo (là phạm vi dự án thật) |
 |---|---|
 | Plugin WordPress bắt sự kiện xuất bản, chống đăng trùng, gửi nền (nút Đăng không phải chờ) | Tra sổ XNQC cho bài sản phẩm (công dụng nguyên văn) |
-| Claude phân loại E/P/N/X và viết nội dung riêng cho Facebook, Pinterest trong 1 lần gọi; kiểm tra độ dài và cụm từ cấm; không đạt thì dùng mẫu | Lớp AI rà soát tuân thủ thứ hai; bộ luật do pháp chế duyệt |
+| Claude phân loại E/P/N/X và viết nội dung riêng cho Facebook, Pinterest trong 1 lần gọi; kiểm tra độ dài và cụm từ cấm; không đạt thì dùng mẫu | Lớp AI rà soát tuân thủ thứ hai; bộ luật do người phụ trách pháp lý duyệt |
 | Chặn bài theo danh mục và thông báo đại lý dạng PDF; câu khuyến cáo do code gắn cho bài sản phẩm | Hai lớp duyệt cho nhóm nhạy cảm (hiện chỉ gắn cờ cảnh báo) |
 | **Duyệt trước khi đăng**: xem, sửa nội dung, chọn giờ, duyệt hoặc từ chối; chống hai người duyệt trùng | Dựng ảnh Pin dọc 2:3 |
 | Lịch đăng tự rải: khung giờ, số bài tối đa/ngày, khoảng cách tối thiểu; giờ chọn tay cho từng bài | Lịch nội dung trên Google Sheet; lượt truy cập theo UTM qua GA4 |
 | Facebook lên bài sau ~7 giây; Pinterest (qua Make.com) đúng giờ đặt, Pin công khai | Báo cáo tuần đã đọc được tương tác Facebook; chưa đọc được số liệu Pin (cần API Pinterest riêng) |
 | Nhật ký, luồng báo lỗi, trang Báo cáo + báo cáo tuần do Claude tóm tắt; chạy thử trên bài thật của doppelherz.vn (không đăng) | Số liệu Pin (lượt xem, lưu): cần API Pinterest riêng |
 
-Ý nghĩa: hai rủi ro kỹ thuật lớn nhất (đăng Facebook bằng API và tạo Pin công khai) đã được gỡ, và quy trình người duyệt đã chạy được. Dự án thật tập trung vào phần **tuân thủ theo dữ liệu của khách** (sổ XNQC, bộ luật pháp chế) và **đưa lên website thật**.
+Ý nghĩa: hai rủi ro kỹ thuật lớn nhất (đăng Facebook bằng API và tạo Pin công khai) đã được gỡ, và quy trình người duyệt đã chạy được. Dự án thật tập trung vào phần **tuân thủ theo dữ liệu của khách** (sổ XNQC, bộ luật đã được người phụ trách pháp lý duyệt) và **đưa lên website thật**.
 
 ---
 
@@ -115,16 +115,17 @@ Cách đọc bảng:
 | 3.5 | Tài khoản tác giả đứng tên 84,5% bài [Đo] là của một người hay tài khoản dùng chung? | 2 | Rủi ro phụ thuộc một người, và an toàn tài khoản | Nếu dùng chung → đề xuất tách tài khoản theo người để nhật ký ghi đúng ai làm gì |
 | 3.6 | Ai sẽ vận hành hệ thống sau bàn giao (xem lỗi, đồng bộ lại)? | 1 | Quyết định nội dung đào tạo và gói bảo trì | Đào tạo ít nhất 2 người phía khách |
 
-### B4. Tuân thủ và pháp chế
+### B4. Tuân thủ và pháp lý quảng cáo
 
 | # | Câu hỏi | Ưu tiên | Vì sao hỏi | Câu trả lời thay đổi thiết kế thế nào |
 |---|---|---|---|---|
-| 4.1 | Hiện bài fanpage có qua pháp chế không? Loại bài nào bắt buộc qua pháp chế? | 1 | Quyết định số lớp duyệt cho từng loại E/P/N | Ánh xạ thẳng vào luồng duyệt |
-| 4.2 | Pháp chế có danh sách từ ngữ cấm/được phép dùng không? | 1 | Cổng tuân thủ cần danh sách gốc | Thay danh sách khởi đầu của chúng tôi bằng danh sách của pháp chế |
-| 4.3 | Sổ XNQC trên website có phải bản mới nhất không? Ai cập nhật khi có số XNQC mới? | 1 | Sổ là nguồn duy nhất cho công dụng sản phẩm | Nếu website chưa cập nhật → cần nguồn khác (bảng Excel của pháp chế) |
-| 4.4 | Bài kiến thức (không nêu sản phẩm) có bị coi là quảng cáo khi đăng trên fanpage thương hiệu không? | 1 | Ranh giới kiến thức – quảng cáo quyết định mức duyệt loại E | Nếu có → loại E cũng phải kèm câu khuyến cáo và qua pháp chế |
+| 4.0 | Hiện ai duyệt pháp lý cho nội dung quảng cáo: pháp chế nội bộ, luật sư/đơn vị thuê ngoài, hay Marketing tự duyệt? | 1 | Chưa biết khách có bộ phận pháp chế hay không [Chưa xác minh] | Xác định người phụ trách pháp lý trong luồng duyệt và bảng RACI |
+| 4.1 | Hiện bài fanpage có qua người duyệt pháp lý không? Loại bài nào bắt buộc qua người duyệt pháp lý? | 1 | Quyết định số lớp duyệt cho từng loại E/P/N | Ánh xạ thẳng vào luồng duyệt |
+| 4.2 | Người duyệt pháp lý có danh sách từ ngữ cấm/được phép dùng không? | 1 | Cổng tuân thủ cần danh sách gốc | Thay danh sách khởi đầu của chúng tôi bằng danh sách của người phụ trách pháp lý |
+| 4.3 | Sổ XNQC trên website có phải bản mới nhất không? Ai cập nhật khi có số XNQC mới? | 1 | Sổ là nguồn duy nhất cho công dụng sản phẩm | Nếu website chưa cập nhật → cần nguồn khác (bảng theo dõi XNQC của người phụ trách hồ sơ quảng cáo, nếu có [Chưa xác minh]) |
+| 4.4 | Bài kiến thức (không nêu sản phẩm) có bị coi là quảng cáo khi đăng trên fanpage thương hiệu không? | 1 | Ranh giới kiến thức – quảng cáo quyết định mức duyệt loại E | Nếu có → loại E cũng phải kèm câu khuyến cáo và qua người phụ trách pháp lý |
 | 4.5 | Cụm "số 1 tại Đức" có tài liệu chứng minh và được phép dùng trên mạng xã hội không? | 2 | Dữ kiện A2-15 | Quyết định chặn hay cho phép cụm so sánh nhất |
-| 4.6 | Bài có hình ảnh bác sĩ, dược sĩ, sự kiện đào tạo nhân viên y tế xử lý thế nào? | 2 | Quy định cấm dùng danh nghĩa nhân viên y tế để quảng cáo thực phẩm [Nguồn] | Thêm luật: bài loại N có từ khóa y tế → luôn qua pháp chế |
+| 4.6 | Bài có hình ảnh bác sĩ, dược sĩ, sự kiện đào tạo nhân viên y tế xử lý thế nào? | 2 | Quy định cấm dùng danh nghĩa nhân viên y tế để quảng cáo thực phẩm [Nguồn] | Thêm luật: bài loại N có từ khóa y tế → luôn qua người phụ trách pháp lý |
 | 4.7 | Doanh nghiệp có quy định nội bộ về việc dùng AI tạo nội dung không? Có cần ghi chú "nội dung có hỗ trợ AI" không? | 2 | Quy định và chính sách nền tảng về nội dung AI có thể thay đổi [Chưa xác minh] | Thêm/không thêm dòng ghi chú; lưu nhật ký AI để kiểm tra lại |
 
 ### B5. Tài khoản và quyền truy cập (Facebook, Pinterest, Meta Business)
@@ -187,12 +188,12 @@ Cách đọc bảng:
 | 1 | Tài khoản quản trị website trên bản thử (staging), hoặc quyền tạo bản sao | Cài và thử plugin | Tuần 2 |
 | 2 | Quyền quản trị fanpage trong Meta Business của khách (hoặc người phía khách thao tác cùng) | Tạo app Meta, lấy token đăng bài | Tuần 2 |
 | 3 | Tài khoản Pinterest doanh nghiệp (hoặc đồng ý tạo mới) và quyền thêm thẻ xác minh lên website | Kết nối Pinterest, xác minh tên miền | Tuần 1 |
-| 4 | Danh sách từ ngữ cấm/được phép và quy định duyệt nội dung của pháp chế | Bộ luật của cổng tuân thủ | Tuần 2 |
+| 4 | Danh sách từ ngữ cấm/được phép và quy định duyệt nội dung hiện có (nếu có) của người phụ trách pháp lý | Bộ luật của cổng tuân thủ | Tuần 2 |
 | 5 | Bảng sản phẩm và số XNQC chính thức (nếu khác website) | Sổ công dụng được phép nói | Tuần 2 |
 | 6 | Hướng dẫn nhận diện thương hiệu: logo, màu, font, ảnh được phép dùng | Mẫu ảnh Pin | Tuần 2 |
 | 7 | 20–30 bài fanpage gần nhất (xuất từ Meta Business Suite hoặc chụp màn hình) | Học giọng văn, bộ bài đánh giá | Tuần 1 |
 | 8 | Quyền xem GA4 (nếu có) | Báo cáo theo UTM | Tuần 3 |
-| 9 | Quyền tạo bản ghi DNS (tên miền phụ cho n8n) hoặc người phía IT làm cùng | Truy cập n8n qua HTTPS | Tuần 3 |
+| 9 | Quyền tạo bản ghi DNS (tên miền phụ cho n8n) hoặc bên quản trị website/tên miền (nội bộ hoặc thuê ngoài) [Chưa xác minh] làm cùng | Truy cập n8n qua HTTPS | Tuần 3 |
 | 10 | Tài khoản thanh toán cho VPS, Claude API, Make (đứng tên khách) | Khách sở hữu tài khoản dịch vụ | Tuần 3 |
 | 11 | Danh sách người duyệt và người dự phòng | Phân quyền, nhắc việc | Tuần 2 |
 | 12 | Thỏa thuận bảo mật (NDA) | Trước khi nhận quyền truy cập | Trước tuần 1 |
@@ -207,8 +208,8 @@ Cách đọc bảng:
 |---|---|---|
 | Doppelherz | Đầu mối marketing (người ra quyết định) | Toàn buổi |
 | Doppelherz | Người đang đăng bài website/fanpage | Phần quy trình + quan sát |
-| Doppelherz | Pháp chế | Phần tuân thủ (30 phút) |
-| Doppelherz | IT/quản trị website | Phần kỹ thuật (20 phút) |
+| Doppelherz | Người phụ trách pháp lý quảng cáo (khách chỉ định) [Giả định] | Phần tuân thủ (30 phút) |
+| Doppelherz | Bên quản trị website (nội bộ hoặc thuê ngoài) [Chưa xác minh] | Phần kỹ thuật (20 phút) |
 | Đối tác | PM/Tư vấn giải pháp | Toàn buổi, dẫn buổi |
 | Đối tác | Kỹ sư tự động hóa | Phần kỹ thuật và tài khoản |
 
@@ -219,8 +220,8 @@ Cách đọc bảng:
 | 15 phút | Mục tiêu dự án, trình bày nhanh quan sát Phần A và chạy demo trực tiếp | – |
 | 25 phút | Mục tiêu, KPI, ngân sách | B1, B8 |
 | 30 phút | Quy trình nội dung, con người, duyệt bài | B2, B3 |
-| 30 phút | Tuân thủ với pháp chế; chốt sơ bộ bảng phân loại E/P/N/X | B4, B9 |
-| 20 phút | Kỹ thuật, tài khoản, đo lường với IT | B5, B6, B7 |
+| 30 phút | Tuân thủ với người phụ trách pháp lý; chốt sơ bộ bảng phân loại E/P/N/X | B4, B9 |
+| 20 phút | Kỹ thuật, tài khoản, đo lường với bên quản trị website | B5, B6, B7 |
 | 30–45 phút | Quan sát người đăng bài làm một bài thật từ đầu đến cuối, bấm giờ từng bước | – |
 
 **Đầu ra (gửi trong 2 ngày làm việc sau buổi):**
@@ -239,7 +240,7 @@ Công cho phần khảo sát đã tính trong kế hoạch (tài liệu 2.2) và
 - Đề bài: `Bai_test_Quan_ly_du_an_AI.docx.md`, Câu 2.
 - Khảo sát website doppelherz.vn qua REST API và RSS công khai, ngày 19/11/2026: `research/01_phan_tich_de_bai.md` (mục 2–4), `research/02_template_3_kenh_va_huong_prototype.md` (mục 1, 2.0, 4), `research/HANDOFF.md` (mục 3).
 - Pinterest Doppelherz Đức: https://de.pinterest.com/doppelherz_de/ (truy cập 19/11/2026, theo `research/02_...` mục 1.3).
-- Quy định quảng cáo TPBVSK (nguồn thứ cấp, không thay ý kiến pháp chế): tuoitre.vn/plo – "Lưu ý về việc quảng cáo mỹ phẩm, thực phẩm từ 15-2-2026"; thuvienphapluat.vn – Luật 75/2025/QH15, NĐ 342/2025/NĐ-CP; dantri.com.vn, vnexpress.net, vietnamnet.vn (theo `research/02_...` mục Nguồn).
+- Quy định quảng cáo TPBVSK (nguồn thứ cấp, không thay ý kiến pháp lý của khách): tuoitre.vn/plo – "Lưu ý về việc quảng cáo mỹ phẩm, thực phẩm từ 15-2-2026"; thuvienphapluat.vn – Luật 75/2025/QH15, NĐ 342/2025/NĐ-CP; dantri.com.vn, vnexpress.net, vietnamnet.vn (theo `research/02_...` mục Nguồn).
 - Pinterest access tiers: https://developers.pinterest.com/docs/key-concepts/access-tiers ; thời gian chờ cấp quyền: community.pinterest.biz (theo `SocialSync-Brief.md` mục 8).
 - Đăng bài lên Page qua Graph API: https://developers.facebook.com/docs/graph-api/reference/page/feed
 - Số đo của bản demo: `nop-bai/04-so-do-quy-trinh.md` (Phần A), nhật ký chạy thử ngày 19/11/2026.

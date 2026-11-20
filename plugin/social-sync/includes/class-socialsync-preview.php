@@ -79,7 +79,7 @@ final class SocialSync_Preview {
 				<p>
 					<span style="display:inline-block;padding:2px 10px;border-radius:10px;color:#fff;background:<?php echo esc_attr( $colors[ $cls ] ?? '#646970' ); ?>"><?php echo esc_html( SocialSync_Report::CLASS_LABELS[ $cls ] ?? 'Chưa rõ' ); ?></span>
 					<?php if ( ! empty( $res['classification_reason'] ) ) : ?> <?php echo esc_html( (string) $res['classification_reason'] ); ?><?php endif; ?>
-					<?php if ( ! empty( $res['sensitive'] ) ) : ?> <strong style="color:#b32d2e">· Nhóm nhạy cảm: cần pháp chế duyệt</strong><?php endif; ?>
+					<?php if ( ! empty( $res['sensitive'] ) ) : ?> <strong style="color:#b32d2e">· Nhóm nhạy cảm: cần duyệt pháp lý</strong><?php endif; ?>
 				</p>
 				<p class="description">Quyết định: <?php echo esc_html( (string) ( $res['decision_text'] ?? '' ) ); ?> · <?php echo esc_html( sprintf( '%s · %s token vào / %s ra · %s ms', $res['content_source'] ?? '?', $r['tokens_in'] ?? '?', $r['tokens_out'] ?? '?', $r['ai_ms'] ?? '?' ) ); ?></p>
 				<?php if ( $prob ) : ?><p style="color:#b32d2e">Kiểm tra không đạt: <?php echo esc_html( implode( '; ', $prob ) ); ?></p><?php endif; ?>

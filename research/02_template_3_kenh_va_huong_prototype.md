@@ -13,7 +13,7 @@ Ngày khảo sát: 2026-11-19. Ký hiệu nguồn: **[Đo]** = số liệu tôi 
   → Website đã có sẵn "sổ công dụng được phép nói" cho từng sản phẩm. Đã trích thành `doppelherz_san_pham_xnqc.csv`.
 
 ### 1.2 Facebook DoppelherzVietnam
-- Trang chính thức, website liên kết tới; ~628 nghìn người theo dõi [Nguồn – kết quả tìm kiếm].
+- Trang chính thức, website liên kết tới; ~628 nghìn người theo dõi [Chưa xác minh – kết quả tìm kiếm, chưa mở được fanpage].
 - **Chưa đo được** nội dung, tần suất, tương tác: Facebook không cho đọc công khai bằng công cụ. Nếu bạn xuất được 20–30 bài gần nhất (Meta Business Suite hoặc chụp màn hình), tôi phân tích bổ sung.
 
 ### 1.3 Pinterest Doppelherz Đức (doppelherz_de) – kênh tham chiếu [Đo]
@@ -30,8 +30,8 @@ Ngày khảo sát: 2026-11-19. Ký hiệu nguồn: **[Đo]** = số liệu tôi 
 | Loại | Dấu hiệu trên website | Facebook | Pinterest | Mức duyệt |
 |---|---|---|---|---|
 | E – Kiến thức | Danh mục Kiến thức sức khỏe, Làm đẹp, Xương khớp…; không nêu công dụng sản phẩm trong bài social | Có | Có (ưu tiên) | 1 người duyệt |
-| P – Sản phẩm | Bài/trang có tên sản phẩm + công dụng | Có | Hạn chế (≤1/10 Pin như kênh Đức) | Marketing + pháp chế; chỉ dùng công dụng trong sổ XNQC |
-| N – Tin thương hiệu | Sự kiện, CSR, báo chí | Có | Không | 1 người duyệt; bài có hình ảnh/danh nghĩa nhân viên y tế → pháp chế |
+| P – Sản phẩm | Bài/trang có tên sản phẩm + công dụng | Có | Hạn chế (≤1/10 Pin như kênh Đức) | Marketing + người phụ trách pháp lý quảng cáo (khách chỉ định) [Giả định]; chỉ dùng công dụng trong sổ XNQC |
+| N – Tin thương hiệu | Sự kiện, CSR, báo chí | Có | Không | 1 người duyệt; bài có hình ảnh/danh nghĩa nhân viên y tế → người phụ trách pháp lý |
 | X – Không đồng bộ | Thông báo chương trình cho đại lý (PDF), Tin nội bộ | Không | Không | Chặn tự động |
 
 ### 2.1 Website (bổ sung trường dữ liệu, không đổi cách viết bài)
@@ -59,7 +59,7 @@ Ngày khảo sát: 2026-11-19. Ký hiệu nguồn: **[Đo]** = số liệu tôi 
 Luồng: đọc bài thật từ doppelherz.vn → phân loại E/P/N/X → (P) tra sổ XNQC → Claude viết caption Facebook + tiêu đề/mô tả/alt-text Pin → bộ kiểm tuân thủ (luật cứng + AI rà) → dựng ảnh Pin 2:3 theo template A/B/C → hàng chờ duyệt → xếp lịch → đăng → log + báo cáo.
 
 Vì sao hướng này hợp doanh nghiệp TPBVSK hơn "đăng tự động hoàn toàn":
-- Mức phạt cho một lỗi quảng cáo (20–40 triệu) ngang ngân sách cả dự án; fanpage có ~628 nghìn người theo dõi. Giá trị nằm ở tốc độ + nhất quán + không sai, không phải ở việc bỏ người duyệt.
+- Mức phạt cho một lỗi quảng cáo (20–40 triệu) ngang ngân sách cả dự án; fanpage có ~628 nghìn người theo dõi [Chưa xác minh]. Giá trị nằm ở tốc độ + nhất quán + không sai, không phải ở việc bỏ người duyệt.
 - Dữ liệu cần cho cổng tuân thủ đã có sẵn trên website (sổ XNQC), nên làm được thật trong 24h.
 - Giải được đúng các điểm đau đã đo: đăng theo đợt, lẫn thông báo đại lý, ảnh ngang không hợp Pinterest, không có UTM.
 
@@ -79,13 +79,13 @@ Phân bổ thời gian gợi ý (tính từ lúc bắt đầu làm): 0–2h tạ
 
 1. **Chỉ nói điều đã được xác nhận.** TPBVSK phải đăng ký và được xác nhận nội dung quảng cáo trước khi quảng cáo; nội dung phải khớp công dụng đã công bố [Nguồn]. Hệ quả: AI không được tự viết công dụng – chỉ lắp ghép từ sổ XNQC.
 2. **Cụm từ bắt buộc:** "Thực phẩm bảo vệ sức khỏe" và câu khuyến cáo không phải là thuốc; chữ rõ, tương phản nền [Nguồn].
-3. **Không dùng hình ảnh, trang phục, tên của bác sĩ, dược sĩ, cơ sở y tế, thư cảm ơn của người bệnh** để quảng cáo thực phẩm; mức phạt báo chí nêu 20–30 triệu [Nguồn]. Hệ quả: prompt sinh ảnh cấm áo blouse/bệnh viện; không dùng lời chứng thực; bài sự kiện có dược sĩ/viện (ví dụ bài 16/10/2026 về đào tạo dược sĩ) phải qua pháp chế trước khi lên social.
+3. **Không dùng hình ảnh, trang phục, tên của bác sĩ, dược sĩ, cơ sở y tế, thư cảm ơn của người bệnh** để quảng cáo thực phẩm; mức phạt báo chí nêu 20–30 triệu [Nguồn]. Hệ quả: prompt sinh ảnh cấm áo blouse/bệnh viện; không dùng lời chứng thực; bài sự kiện có dược sĩ/viện (ví dụ bài 16/10/2026 về đào tạo dược sĩ) phải qua người phụ trách pháp lý trước khi lên social.
 4. **Từ ngữ bệnh lý:** chặn "chữa", "điều trị", "đặc trị", "khỏi hẳn", "dứt điểm", "100%", cam kết thời gian. Dùng "hỗ trợ", "bổ sung".
 5. **So sánh nhất:** "số 1", "tốt nhất" cần tài liệu chứng minh [Chưa kiểm – Luật Quảng cáo Điều 8]. Website đang dùng "số 1 tại Đức" → hỏi khách hàng tài liệu gốc và phạm vi được dùng.
 6. **Ranh giới kiến thức – quảng cáo:** bài kiến thức trở thành quảng cáo khi nêu tên sản phẩm kèm công dụng. Vì vậy cần phân loại E/P ngay từ đầu.
 7. **Nhóm nhạy cảm:** sản phẩm cho trẻ em và phụ nữ mang thai → luôn hai lớp duyệt.
 8. **Chính sách nền tảng** [Nguồn thứ cấp]: Pinterest cấm ngôn ngữ/hình ảnh giảm cân trong quảng cáo, cấm before–after và lời chứng thực; Meta cấm nội dung quảng cáo ngụ ý biết tình trạng sức khỏe người xem, và từ 07/2026 xét theo câu chữ tuyên bố thay vì theo loại sản phẩm. Viết bài thường theo chuẩn "chạy quảng cáo được" để khi boost không bị từ chối.
-9. **Căn cứ pháp lý đang thay đổi:** Luật Quảng cáo sửa đổi hiệu lực 01/01/2026, NĐ 342/2025 hiệu lực 15/02/2026; NĐ 46/2026 thay NĐ 15/2018 nhưng có nguồn ghi đang tạm ngưng; thẩm quyền cấp XNQC chuyển về UBND cấp tỉnh từ 01/07/2026 [Nguồn]. Hệ quả: bộ luật kiểm tra phải là file cấu hình do pháp chế duyệt, không viết cứng trong code. Phần này không thay cho ý kiến pháp chế.
+9. **Căn cứ pháp lý đang thay đổi:** Luật Quảng cáo sửa đổi hiệu lực 01/01/2026, NĐ 342/2025 hiệu lực 15/02/2026; NĐ 46/2026 thay NĐ 15/2018 nhưng có nguồn ghi đang tạm ngưng; thẩm quyền cấp XNQC chuyển về UBND cấp tỉnh từ 01/07/2026 [Nguồn]. Hệ quả: bộ luật kiểm tra phải là file cấu hình do người phụ trách pháp lý duyệt, không viết cứng trong code. Phần này không thay cho ý kiến pháp lý.
 10. **AI và nội dung y tế:** chỉ viết lại từ bài gốc; cấm thêm số liệu, nghiên cứu, liều dùng. Bài gốc hiện không có tài liệu tham khảo nên AI cũng không có gì để đối chiếu – nên nêu thành khuyến nghị.
 11. **Bình luận/inbox:** người dùng sẽ hỏi chuyện bệnh. Ngoài phạm vi dự án đầu nhưng phải có quy tắc: không tư vấn điều trị, chuyển hotline.
 

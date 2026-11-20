@@ -17,14 +17,16 @@ final class SocialSync_Admin {
 	}
 
 	public static function menu(): void {
-		add_menu_page( 'SocialSync', 'SocialSync', SocialSync_Log_Page::CAP, SocialSync_Log_Page::SLUG, array( 'SocialSync_Log_Page', 'render' ), 'dashicons-share', 58 );
-		add_submenu_page( SocialSync_Log_Page::SLUG, 'Nhật ký đồng bộ', 'Nhật ký đồng bộ', SocialSync_Log_Page::CAP, SocialSync_Log_Page::SLUG, array( 'SocialSync_Log_Page', 'render' ) );
+		// Menu chính mở thẳng Trung tâm (việc hằng ngày), kèm số bài chờ duyệt. Nhật ký chi tiết chỉ còn để tra cứu.
 		$waiting = SocialSync_Review::pending_count();
 		$bubble  = $waiting ? ' <span class="awaiting-mod">' . (int) $waiting . '</span>' : '';
-		add_submenu_page( SocialSync_Log_Page::SLUG, 'Chờ duyệt', 'Chờ duyệt' . $bubble, SocialSync_Log_Page::CAP, SocialSync_Review::SLUG, array( 'SocialSync_Review', 'render' ) );
-		add_submenu_page( SocialSync_Log_Page::SLUG, 'Báo cáo đồng bộ', 'Báo cáo', SocialSync_Log_Page::CAP, SocialSync_Report::SLUG, array( 'SocialSync_Report', 'render' ) );
-		add_submenu_page( SocialSync_Log_Page::SLUG, 'Chạy thử với bài thật', 'Chạy thử doppelherz.vn', SocialSync_Log_Page::CAP, SocialSync_Preview::SLUG, array( 'SocialSync_Preview', 'render' ) );
-		add_submenu_page( SocialSync_Log_Page::SLUG, 'Cấu hình SocialSync', 'Cấu hình', 'manage_options', self::PAGE, array( __CLASS__, 'render' ) );
+		$parent  = SocialSync_Hub::SLUG;
+		add_menu_page( 'Trung tâm SocialSync', 'SocialSync' . $bubble, SocialSync_Log_Page::CAP, $parent, array( 'SocialSync_Hub', 'render' ), 'dashicons-share', 58 );
+		add_submenu_page( $parent, 'Trung tâm SocialSync', 'Trung tâm' . $bubble, SocialSync_Log_Page::CAP, $parent, array( 'SocialSync_Hub', 'render' ) );
+		add_submenu_page( $parent, 'Báo cáo đồng bộ', 'Báo cáo', SocialSync_Log_Page::CAP, SocialSync_Report::SLUG, array( 'SocialSync_Report', 'render' ) );
+		add_submenu_page( $parent, 'Nhật ký chi tiết', 'Nhật ký chi tiết', SocialSync_Log_Page::CAP, SocialSync_Log_Page::SLUG, array( 'SocialSync_Log_Page', 'render' ) );
+		add_submenu_page( $parent, 'Chạy thử với bài thật', 'Chạy thử doppelherz.vn', SocialSync_Log_Page::CAP, SocialSync_Preview::SLUG, array( 'SocialSync_Preview', 'render' ) );
+		add_submenu_page( $parent, 'Cấu hình SocialSync', 'Cấu hình', 'manage_options', self::PAGE, array( __CLASS__, 'render' ) );
 	}
 
 	public static function settings_url( array $args = array() ): string {
@@ -80,7 +82,7 @@ final class SocialSync_Admin {
 		?>
 		<div class="wrap">
 			<h1>Cấu hình SocialSync</h1>
-			<p>Khi một bài viết hoặc sản phẩm được xuất bản lần đầu, plugin gửi dữ liệu bài sang n8n. n8n tạo nội dung, đăng lên Facebook Fanpage, Pinterest rồi báo kết quả về <a href="<?php echo esc_url( admin_url( 'admin.php?page=' . SocialSync_Log_Page::SLUG ) ); ?>">Nhật ký đồng bộ</a>.</p>
+			<p>Khi một bài viết hoặc sản phẩm được xuất bản lần đầu, plugin gửi dữ liệu bài sang n8n. n8n tạo nội dung, đăng lên Facebook Fanpage, Pinterest rồi báo kết quả về <a href="<?php echo esc_url( SocialSync_Hub::url() ); ?>">Trung tâm SocialSync</a>.</p>
 
 			<?php settings_errors(); ?>
 			<?php self::render_test_result(); ?>

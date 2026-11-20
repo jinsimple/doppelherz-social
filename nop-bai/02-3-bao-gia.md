@@ -153,7 +153,7 @@ Chênh lệch hai phương án: 49.948.000 − 42.448.000 = 7.500.000 (PM 1,5 ng
 **Từ năm thứ hai** (theo giá hiện tại): VPS 3.168.000 + Claude tối đa 3.180.000 = 6.348.000đ/năm nếu khách tự vận hành; cộng bảo trì 12 × 500.000 = 6.000.000đ nếu thuê đối tác → 12.348.000đ/năm.
 
 **Cách giảm thêm chi phí vận hành:**
-- Đặt n8n trên máy chủ sẵn có của khách → bỏ 3.168.000đ/năm.
+- Nếu khách có máy chủ nội bộ [Chưa xác minh], đặt n8n trên đó → bỏ 3.168.000đ/năm.
 - Đổi sang Claude Sonnet 5.5 ($2 / $10 mỗi 1 triệu token, tra 19/11/2026) → chi phí AI giảm một nửa. Chỉ đổi sau khi chạy lại bộ 20 bài mẫu và chất lượng vẫn đạt.
 
 ---
@@ -188,7 +188,7 @@ Thanh toán chi phí một lần theo mốc nghiệm thu:
 - Kiểm tra hệ thống mỗi tháng: lượt kẹt, lỗi, sao lưu, dung lượng, chi phí API.
 - Cập nhật bản vá n8n và plugin.
 - Cấp lại token khi hết hạn; xử lý thay đổi API của nền tảng.
-- Cập nhật bộ luật tuân thủ khi pháp chế gửi thay đổi.
+- Cập nhật bộ luật tuân thủ khi người phụ trách pháp lý quảng cáo (khách chỉ định) [Giả định] gửi thay đổi.
 - Báo cáo bảo trì hằng tháng.
 - Gồm tối đa 2 giờ công/tháng, không cộng dồn. Giờ vượt tính 225.000đ/giờ (= 1.800.000đ ÷ 8), báo trước khi làm.
 
@@ -197,7 +197,7 @@ Thanh toán chi phí một lần theo mốc nghiệm thu:
 ## 8. Không bao gồm
 
 - Viết bài website, sản xuất ảnh/video mới, chụp ảnh sản phẩm.
-- Ý kiến pháp lý. Pháp chế của khách chịu trách nhiệm cuối về nội dung đăng. Bộ luật tuân thủ là công cụ hỗ trợ, không thay ý kiến pháp chế.
+- Ý kiến pháp lý. Bên phụ trách pháp lý do khách chỉ định chịu trách nhiệm cuối về nội dung đăng. Bộ luật tuân thủ là công cụ hỗ trợ, không thay ý kiến pháp lý.
 - Chạy quảng cáo trả phí, quản lý ngân sách quảng cáo.
 - Trả lời bình luận và tin nhắn fanpage.
 - Kênh khác: Instagram, Zalo OA, YouTube.

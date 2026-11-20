@@ -6,7 +6,8 @@
  *   lưu cùng request REST với bài, nên đã có sẵn khi hook wp_after_insert_post chạy.
  * - Trình soạn cổ điển (sản phẩm WooCommerce): hộp meta, lưu ở save_post (chạy trước wp_after_insert_post).
  * Để trống = bộ xếp lịch tự chọn giờ (khung giờ, số bài tối đa/ngày, khoảng cách tối thiểu).
- * Chỉ có tác dụng ở lần xuất bản đầu tiên; sau đó đổi giờ trong màn hình Chờ duyệt.
+ * Chỉ có tác dụng ở lần xuất bản đầu tiên; sau đó đổi giờ khi duyệt trong Trung tâm SocialSync.
+ * Sau khi xuất bản, panel/hộp meta hiện trạng thái từng kênh và link mở đúng bài trong Trung tâm.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -54,9 +55,11 @@ final class SocialSync_Schedule_UI {
 			'socialsync-schedule-panel',
 			plugins_url( 'assets/schedule-panel.js', SOCIALSYNC_FILE ),
 			array( 'wp-plugins', 'wp-editor', 'wp-element', 'wp-components', 'wp-data', 'wp-core-data' ),
-			SOCIALSYNC_VERSION,
+			SocialSync_Hub::asset_ver( 'schedule-panel.js' ),
 			true
 		);
+		$post_id = isset( $GLOBALS['post'] ) && $GLOBALS['post'] instanceof WP_Post ? (int) $GLOBALS['post']->ID : 0;
+		$can_hub = current_user_can( SocialSync_Log_Page::CAP );
 		wp_localize_script(
 			'socialsync-schedule-panel',
 			'SocialSyncSchedule',
@@ -66,8 +69,14 @@ final class SocialSync_Schedule_UI {
 				'enabled'  => SocialSync_Settings::enabled_channels(),
 				'window'   => SocialSync_Settings::get( 'window_start' ) . '–' . SocialSync_Settings::get( 'window_end' ),
 				'approval' => SocialSync_Settings::approval_required(),
+				'postId'   => $post_id,
+				'status'   => SocialSync_Hub::status_for_editor( $post_id ),
+				'hubUrl'   => $can_hub ? SocialSync_Hub::url() : '',
+				'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+				'nonce'    => wp_create_nonce( 'socialsync_post_status' ),
 			)
 		);
+		SocialSync_Logger::debug( 'schedule.panel_enqueue', 'Nạp panel lịch đăng trong trình soạn', array( 'post_id' => $post_id, 'can_hub' => $can_hub, 'jobs' => count( SocialSync_DB::table_exists() ? SocialSync_DB::jobs( $post_id, 10 ) : array() ) ) );
 	}
 
 	public static function meta_box(): void {
@@ -86,7 +95,23 @@ final class SocialSync_Schedule_UI {
 
 	public static function render_box( WP_Post $post ): void {
 		wp_nonce_field( 'socialsync_schedule_' . $post->ID, 'socialsync_schedule_nonce' );
-		echo '<p class="description">Để trống: hệ thống tự chọn giờ trong khung ' . esc_html( SocialSync_Settings::get( 'window_start' ) . '–' . SocialSync_Settings::get( 'window_end' ) ) . '. Chỉ áp dụng khi xuất bản lần đầu.</p>';
+		$status = SocialSync_Hub::status_for_editor( (int) $post->ID );
+		if ( $status ) {
+			// Đã có lượt đồng bộ: giờ ở đây không còn tác dụng, hiện trạng thái kênh và đường sang Trung tâm.
+			echo '<ul style="margin:0 0 8px">';
+			foreach ( $status as $s ) {
+				printf( '<li><strong>%s:</strong> %s%s</li>', esc_html( $s['label'] ), esc_html( $s['text'] ), $s['url'] ? ' · <a href="' . esc_url( $s['url'] ) . '" target="_blank" rel="noopener">mở ↗</a>' : '' );
+			}
+			echo '</ul>';
+			if ( current_user_can( SocialSync_Log_Page::CAP ) ) {
+				printf( '<p><a class="button" href="%s">Mở trong Trung tâm SocialSync →</a></p>', esc_url( SocialSync_Hub::url( (int) $post->ID ) ) );
+			}
+			echo '<p class="description">Đổi giờ đăng khi duyệt trong Trung tâm.</p>';
+			return;
+		}
+		echo '<p class="description">Để trống: hệ thống tự chọn giờ trong khung ' . esc_html( SocialSync_Settings::get( 'window_start' ) . '–' . SocialSync_Settings::get( 'window_end' ) ) . '. Chỉ áp dụng khi xuất bản lần đầu.';
+		echo SocialSync_Settings::approval_required() ? ' Sau khi đăng, AI viết nội dung (10–30 giây) rồi chờ duyệt trong Trung tâm SocialSync.' : ' Sau khi đăng, AI viết nội dung rồi tự đăng theo giờ.';
+		echo '</p>';
 		foreach ( SocialSync_Settings::CHANNELS as $channel => $label ) {
 			$key = SocialSync_Scheduler::META_PREFIX . $channel;
 			printf(

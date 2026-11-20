@@ -18,7 +18,7 @@ Kế hoạch này viết cho **phương án đề xuất** trong báo giá. Phư
 | Ngày bắt đầu giả định | Thứ Hai 07/12/2026 → bàn giao 29/01/2027 [Suy luận: trước Tết Nguyên đán 2027, chưa kiểm ngày Tết chính xác] |
 | Công phía đối tác | **20,5 ngày công**: PM/Tư vấn 8 · Kỹ sư tự động hóa 11 · Thiết kế 1,5 |
 | Công cụ chính | WordPress (website sẵn có), plugin SocialSync, n8n tự host trên VPS, Claude API, Facebook Graph API, Make.com (cầu nối Pinterest), Google Sheets |
-| Nguyên tắc | Không có chế độ "đăng thẳng". Mọi bài qua người duyệt. Bộ luật tuân thủ là file cấu hình pháp chế sửa được |
+| Nguyên tắc | Không có chế độ "đăng thẳng". Mọi bài qua người duyệt. Bộ luật tuân thủ là file cấu hình người phụ trách pháp lý quảng cáo (khách chỉ định) [Giả định] sửa được |
 
 ---
 
@@ -30,7 +30,7 @@ Bản demo đã chạy thật tại https://shop.adaptivealgo.uk và https://n8n
 |---|---|---|
 | Plugin WordPress: bắt sự kiện xuất bản, chống đăng trùng, gửi nền, nhật ký, đồng bộ lại, log, UTM | Đã chạy | Cài lên website khách (qua bản thử) |
 | Chặn bài theo danh mục / thông báo PDF; phân loại E/P/N/X bằng Claude | Đã chạy (đã thử trên bài thật của doppelherz.vn, không đăng) | Chỉnh danh mục chặn theo khách; đo độ chính xác trên bộ 20 bài mẫu |
-| n8n: Claude viết nội dung 2 kênh trong 1 lần gọi, kiểm tra độ dài và cụm từ cấm, mẫu dự phòng, câu khuyến cáo do code gắn | Đã chạy | Thêm tra sổ XNQC, bộ luật của pháp chế, lớp rà soát thứ hai |
+| n8n: Claude viết nội dung 2 kênh trong 1 lần gọi, kiểm tra độ dài và cụm từ cấm, mẫu dự phòng, câu khuyến cáo do code gắn | Đã chạy | Thêm tra sổ XNQC, bộ luật do người phụ trách pháp lý duyệt, lớp rà soát thứ hai |
 | Màn hình duyệt: sửa nội dung, chọn giờ, duyệt / đăng ngay / từ chối, chống duyệt trùng | Đã chạy | Hai lớp duyệt cho nhóm nhạy cảm; nhắc việc duyệt |
 | Lịch đăng tự rải (khung giờ, tối đa/ngày, khoảng cách) + giờ chọn tay trên bài | Đã chạy | Lịch nội dung trên Google Sheet nếu khách cần |
 | Facebook qua Graph API | Đã chạy, lên bài sau ~7 giây | Tạo app trong Meta Business của khách, thêm quyền đọc tương tác |
@@ -42,7 +42,7 @@ Bản demo đã chạy thật tại https://shop.adaptivealgo.uk và https://n8n
 - Giai đoạn xây dựng còn khoảng **8 ngày công kỹ sư (2 tuần lịch)**, thay vì ước tính 15–17 ngày công nếu làm từ đầu.
 - Hai rủi ro kỹ thuật lớn nhất đã gỡ: đăng Facebook bằng API, và tạo Pin **công khai** khi app Pinterest riêng chưa được duyệt.
 - Giai đoạn thiết kế dùng lại trạng thái, cấu trúc dữ liệu và prompt của demo, chỉ bổ sung phần tuân thủ.
-- Demo đã có thêm màn hình duyệt, phân loại, lịch tự rải và báo cáo (cập nhật tối 19/11/2026). Ngày công kỹ sư vẫn giữ 11 ngày: phần tiết kiệm được dồn cho việc đưa lên website thật, tra sổ XNQC, lớp rà soát thứ hai và kiểm thử cùng pháp chế [Suy luận].
+- Demo đã có thêm màn hình duyệt, phân loại, lịch tự rải và báo cáo (cập nhật tối 19/11/2026). Ngày công kỹ sư vẫn giữ 11 ngày: phần tiết kiệm được dồn cho việc đưa lên website thật, tra sổ XNQC, lớp rà soát thứ hai và kiểm thử cùng người phụ trách pháp lý [Suy luận].
 
 ---
 
@@ -51,7 +51,7 @@ Bản demo đã chạy thật tại https://shop.adaptivealgo.uk và https://n8n
 | GĐ | Tên | Tuần (lịch giả định) | Ngày công đối tác | Đầu ra | Tiêu chí nghiệm thu |
 |---|---|---|---|---|---|
 | 1 | Khảo sát và chẩn đoán | Tuần 1 (07–11/12/2026) | PM 2 | Biên bản khảo sát; sơ đồ quy trình hiện tại có bấm giờ; bảng phân loại E/P/N/X; phạm vi chốt và báo giá chính thức | Đầu mối marketing ký biên bản và chọn phương án |
-| 2 | Thiết kế giải pháp | Tuần 2 (14–18/12) | PM 2, KS 1 | Tài liệu thiết kế: luồng, trạng thái, luồng duyệt; bộ luật tuân thủ (file cấu hình); prompt bản 1; phác thảo 3 mẫu ảnh Pin; kế hoạch kiểm thử và bộ 20 bài mẫu | Marketing duyệt luồng và mẫu; **pháp chế duyệt bộ luật và danh sách từ cấm** |
+| 2 | Thiết kế giải pháp | Tuần 2 (14–18/12) | PM 2, KS 1 | Tài liệu thiết kế: luồng, trạng thái, luồng duyệt; bộ luật tuân thủ (file cấu hình); prompt bản 1; phác thảo 3 mẫu ảnh Pin; kế hoạch kiểm thử và bộ 20 bài mẫu | Marketing duyệt luồng và mẫu; **người phụ trách pháp lý duyệt bộ luật và danh sách từ cấm** |
 | 3 | Xây dựng | Tuần 3–4 (21/12/2026–01/01/2027) | KS 8, TK 1,5 | VPS + n8n chạy HTTPS, có sao lưu; plugin trên bản thử của website; luồng n8n đầy đủ; mẫu ảnh Pin dựng tự động; lịch nội dung + báo cáo tuần | Buổi demo cuối tuần 4: một bài mỗi loại E/P/N/X chạy đúng từ đầu đến cuối trên bản thử |
 | 4 | Kiểm thử và UAT | Tuần 5 (04–08/01/2027) | PM 0,5, KS 1 | Biên bản UAT với 20 bài mẫu và các ca lỗi | Đạt toàn bộ tiêu chí ở mục 3.1 |
 | 5 | Chạy thử song song | Tuần 6–7 (11–22/01/2027) | PM 1, KS 0,5 | Tuần 6: hệ thống chạy trên website thật, chỉ tạo nội dung chờ duyệt, không đăng. Tuần 7: bật đăng thật sau khi duyệt | Đạt tiêu chí ở mục 3.2 |
@@ -115,7 +115,7 @@ gantt
 
   section Mốc
   Khách chọn phương án          :milestone, 2026-12-11, 0d
-  Pháp chế duyệt bộ luật        :milestone, 2026-12-18, 0d
+  Pháp lý duyệt bộ luật         :milestone, 2026-12-18, 0d
   Demo trên bản thử             :milestone, 2027-01-01, 0d
   UAT đạt                       :milestone, 2027-01-08, 0d
   Nghiệm thu bàn giao           :milestone, 2027-01-29, 0d
@@ -124,7 +124,7 @@ gantt
 Ghi chú:
 - Ngày 01/01/2027 là ngày nghỉ. Giai đoạn 3 cần 8 ngày công kỹ sư trong 9 ngày làm việc, nên vẫn kịp.
 - **Pinterest không nằm trên đường găng.** Hệ thống chạy thật qua Make.com (đã chứng minh trong demo). Nếu Pinterest cấp Standard access, có thể chuyển sang API riêng bằng cách thay một khối trong n8n (xem mục 8, rủi ro R1).
-- **Đường găng thật** là hai việc phía khách: quyền admin fanpage (tuần 2) và pháp chế duyệt bộ luật (cuối tuần 2).
+- **Đường găng thật** là hai việc phía khách: quyền admin fanpage (tuần 2) và người phụ trách pháp lý duyệt bộ luật (cuối tuần 2).
 
 ---
 
@@ -134,7 +134,7 @@ Ghi chú:
 
 | Vai trò | Nhiệm vụ chính | Ngày công |
 |---|---|---|
-| PM / Tư vấn giải pháp | Dẫn khảo sát, chẩn đoán, thiết kế luồng và luồng duyệt, soạn bộ luật tuân thủ cùng pháp chế, viết prompt, điều phối UAT, đào tạo, báo cáo tiến độ | 8 |
+| PM / Tư vấn giải pháp | Dẫn khảo sát, chẩn đoán, thiết kế luồng và luồng duyệt, soạn bộ luật tuân thủ cùng người phụ trách pháp lý, viết prompt, điều phối UAT, đào tạo, báo cáo tiến độ | 8 |
 | Kỹ sư tự động hóa | VPS, n8n, bảo mật, sao lưu; chỉnh plugin WordPress (PHP); luồng n8n; dựng ảnh Pin tự động; báo cáo; xử lý lỗi | 11 |
 | Thiết kế đồ họa | 3 mẫu ảnh Pin (bố cục A câu hỏi, B dải tiêu đề, C sản phẩm) theo nhận diện thương hiệu | 1,5 |
 | **Tổng** | | **20,5** |
@@ -145,8 +145,8 @@ Ghi chú:
 |---|---|---|
 | Đầu mối marketing | Ra quyết định phạm vi, duyệt thiết kế, nghiệm thu, dự họp tuần | ~3 ngày trong 8 tuần |
 | Người duyệt nội dung (+ 1 người dự phòng) | Duyệt bộ bài mẫu ở UAT; duyệt bài trong chạy song song và vận hành | ~2 ngày trong dự án; sau đó vài phút mỗi bài |
-| Pháp chế | Duyệt bộ luật, danh sách từ cấm, sổ XNQC; duyệt lớp 2 cho bài P và nhóm nhạy cảm | ~1 ngày trong dự án |
-| IT / Quản trị website | Bản thử website, cài plugin lên website thật, DNS tên miền phụ, mở tường lửa Cloudflare nếu cần | ~1,5 ngày |
+| Người phụ trách pháp lý quảng cáo (khách chỉ định) [Giả định] | Duyệt bộ luật, danh sách từ cấm, sổ XNQC; duyệt lớp 2 cho bài P và nhóm nhạy cảm | ~1 ngày trong dự án |
+| Bên quản trị website (nội bộ hoặc thuê ngoài) [Chưa xác minh] | Bản thử website, cài plugin lên website thật, DNS tên miền phụ, mở tường lửa Cloudflare nếu cần | ~1,5 ngày |
 | Quản trị fanpage / Meta Business | Cấp quyền, tạo app Meta cùng kỹ sư | ~0,5 ngày |
 | Người đứng tên tài khoản dịch vụ | Mở tài khoản VPS, Claude API, Make; nhập thẻ thanh toán | ~0,5 ngày |
 
@@ -179,7 +179,7 @@ Giá và nguồn chi tiết ở tài liệu 2.3.
 
 R = thực hiện · A = chịu trách nhiệm cuối, phê duyệt · C = được hỏi ý kiến · I = được thông báo
 
-| Hoạt động | PM đối tác | KS đối tác | TK đối tác | Đầu mối MKT | Người duyệt ND | Pháp chế | IT website | Ban giám đốc |
+| Hoạt động | PM đối tác | KS đối tác | TK đối tác | Đầu mối MKT | Người duyệt ND | Pháp lý (khách chỉ định) | Quản trị website (nội bộ/thuê ngoài) | Ban giám đốc |
 |---|---|---|---|---|---|---|---|---|
 | Khảo sát, chẩn đoán | R | C | – | A | C | C | C | I |
 | Chốt phạm vi, báo giá, hợp đồng | R | C | – | A | – | – | – | C |
@@ -195,7 +195,9 @@ R = thực hiện · A = chịu trách nhiệm cuối, phê duyệt · C = đư�
 | Đào tạo, tài liệu | R | R | – | A | I | I | I | – |
 | Nghiệm thu bàn giao | R | C | – | A | C | C | C | I |
 | Vận hành, xử lý lỗi sau bàn giao | C | R | – | A | I | – | C | – |
-| Thanh toán dịch vụ (VPS, Claude, Make) | I | C | – | A | – | – | R | – |
+| Thanh toán dịch vụ (VPS, Claude, Make) | I | C | – | A, R* | – | – | – | – |
+
+\* Người đứng tên và thanh toán tài khoản dịch vụ (Kế toán hoặc Marketing) chốt ở khảo sát [Giả định].
 
 ---
 
@@ -206,15 +208,15 @@ R = thực hiện · A = chịu trách nhiệm cuối, phê duyệt · C = đư�
 | R1 | Pinterest chậm cấp Trial/Standard access | Cao | Không dùng được API riêng | Go-live bằng Make.com (đã chứng minh trong demo). Chuyển sang API riêng khi được cấp; làm miễn phí nếu được cấp trong thời gian bảo hành |
 | R2 | Kết nối Pinterest của Make lỗi (người dùng Make báo lỗi 401/403 từ 09/2025 [Nguồn]) | Trung bình | Pin không lên | Luồng báo lỗi đánh dấu thất bại ngay; nút đồng bộ lại; dự phòng: xuất "gói Pin" (ảnh, tiêu đề, mô tả, link) để đăng tay |
 | R3 | Fanpage không do khách quản trị đầy đủ (agency giữ), hoặc phải xác minh doanh nghiệp Meta | Trung bình | Chậm 1–3 tuần [Nguồn] | Hỏi ngay ở buổi khảo sát (B5.1, B5.2); làm hồ sơ từ tuần 1 |
-| R4 | Pháp chế phản hồi chậm bộ luật | Trung bình | Chậm cả dự án | Gửi bản nháp bộ luật ngay sau khảo sát; hẹn lịch duyệt cố định cuối tuần 2; bộ luật là file cấu hình nên sửa sau được |
+| R4 | Người phụ trách pháp lý phản hồi chậm bộ luật | Trung bình | Chậm cả dự án | Gửi bản nháp bộ luật ngay sau khảo sát; hẹn lịch duyệt cố định cuối tuần 2; bộ luật là file cấu hình nên sửa sau được |
 | R5 | AI viết sai ý hoặc thêm công dụng | Trung bình | Phạt 20–40 triệu/lỗi [Nguồn], ảnh hưởng thương hiệu | Ba lớp: prompt ràng buộc → cổng tuân thủ (luật cứng + rà soát) → người duyệt. Bài P chỉ lắp ghép từ sổ XNQC |
 | R6 | Người duyệt quá tải hoặc vắng, bài tồn đọng | Trung bình | Bài lên chậm | Người dự phòng; nhắc việc khi bài chờ quá hạn; khung giờ đăng có chừa thời gian duyệt |
 | R7 | Dựng ảnh Pin bằng n8n lỗi font tiếng Việt có dấu | Trung bình [Suy luận – chưa thử] | Ảnh Pin xấu | Thử ngay đầu giai đoạn 3; phương án lùi: dùng ảnh đại diện như demo |
 | R8 | VPS hoặc n8n ngừng chạy | Thấp | Bài không được đồng bộ | Cảnh báo lượt kẹt (đã có trong demo); sao lưu hằng ngày; nút đồng bộ lại |
 | R9 | Token Facebook hết hạn hoặc bị thu hồi quyền | Trung bình | Facebook ngừng đăng | Dùng token dài hạn; nhật ký ghi lỗi nguyên văn; quy trình cấp lại token trong tài liệu vận hành [Chưa xác minh loại token phù hợp nhất cho Business khách] |
-| R10 | Quy định quảng cáo thay đổi trong năm | Trung bình | Bộ luật lỗi thời | Bộ luật tách khỏi code; pháp chế sửa được; rà soát trong gói bảo trì |
+| R10 | Quy định quảng cáo thay đổi trong năm | Trung bình | Bộ luật lỗi thời | Bộ luật tách khỏi code; người phụ trách pháp lý sửa được; rà soát trong gói bảo trì |
 | R11 | Chi phí Claude vượt dự kiến | Thấp | Vượt ngân sách vận hành | Đặt hạn mức chi tiêu trên tài khoản Claude; ghi số token từng lượt; có thể đổi sang model rẻ hơn |
-| R12 | Lịch rơi vào cuối năm và trước Tết | Trung bình | Thiếu người phía khách | Chốt lịch người duyệt và pháp chế ngay buổi khảo sát; nếu chậm, lùi chạy song song sang sau Tết |
+| R12 | Lịch rơi vào cuối năm và trước Tết | Trung bình | Thiếu người phía khách | Chốt lịch người duyệt và người phụ trách pháp lý ngay buổi khảo sát; nếu chậm, lùi chạy song song sang sau Tết |
 | R13 | Lộ khóa API, token | Thấp | Mất an toàn tài khoản | Khóa lưu trong kho credential của n8n; không ghi vào code, log; đổi toàn bộ mật khẩu và thu hồi quyền đối tác khi bàn giao |
 
 ---
@@ -236,7 +238,7 @@ R = thực hiện · A = chịu trách nhiệm cuối, phê duyệt · C = đư�
 
 | Hình thức | Tần suất | Nội dung | Người nhận |
 |---|---|---|---|
-| Họp tiến độ 30 phút (trực tuyến) | Thứ Hai hằng tuần | Đã làm, sắp làm, rủi ro, việc cần khách quyết | Đầu mối MKT; mời pháp chế/IT khi cần |
+| Họp tiến độ 30 phút (trực tuyến) | Thứ Hai hằng tuần | Đã làm, sắp làm, rủi ro, việc cần khách quyết | Đầu mối MKT; mời người phụ trách pháp lý / bên quản trị website khi cần |
 | Báo cáo tuần 1 trang | Thứ Sáu hằng tuần | Tiến độ theo mốc (đúng/chậm), ngày công đã dùng, rủi ro mở, quyết định chờ | Đầu mối MKT, Ban giám đốc (I) |
 | Bảng theo dõi việc (Trello hoặc Google Sheet) | Cập nhật hằng ngày | Từng việc, người làm, hạn, trạng thái | Cả nhóm hai bên |
 | Nhóm Zalo dự án | Khi cần | Hỏi nhanh; báo ngay việc bị chặn | Cả nhóm |

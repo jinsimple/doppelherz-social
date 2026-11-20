@@ -56,6 +56,16 @@ final class SocialSync_REST {
 				'permission_callback' => array( __CLASS__, 'auth' ),
 			)
 		);
+		// n8n hỏi "còn đăng lượt này không?" ngay trước khi đăng (sau khi chờ tới giờ).
+		register_rest_route(
+			self::NS,
+			'/jobs/(?P<id>\d+)/go',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'go_check' ),
+				'permission_callback' => array( __CLASS__, 'auth' ),
+			)
+		);
 		register_rest_route(
 			self::NS,
 			'/executions/(?P<id>\d+)/failed',
@@ -524,6 +534,76 @@ final class SocialSync_REST {
 		}
 		$ts = is_numeric( $value ) ? (int) $value : strtotime( (string) $value );
 		return false === $ts ? false : gmdate( 'Y-m-d H:i:s', $ts );
+	}
+
+	/**
+	 * n8n hỏi trước khi đăng một lượt đã chờ tới giờ. Trả {go:true} và "nhận lượt" (dispatch_token = "go:...")
+	 * chỉ khi: lượt còn ở scheduled, mã lệnh khớp (hoặc lượt Tự đăng chưa có mã thì giờ hẹn khớp ±120 giây),
+	 * bài còn xuất bản và không bị chặn. Nhận lượt là UPDATE có điều kiện nên Hủy lịch / Đổi giờ bấm cùng lúc
+	 * chỉ một bên thắng. Mọi trường hợp khác trả {go:false, reason} để n8n bỏ lượt, không đăng.
+	 */
+	public static function go_check( WP_REST_Request $req ): WP_REST_Response {
+		$job_id = (int) $req['id'];
+		$body   = $req->get_json_params();
+		$body   = is_array( $body ) ? $body : array();
+		$given  = isset( $body['dispatch_token'] ) && '' !== (string) $body['dispatch_token'] ? (string) $body['dispatch_token'] : null;
+		$at     = isset( $body['scheduled_at'] ) ? strtotime( (string) $body['scheduled_at'] ) : false;
+		$job    = SocialSync_DB::get_job( $job_id );
+		$log    = array(
+			'job_id'         => $job_id,
+			'post_id'        => null === $job ? null : (int) $job['post_id'],
+			'channel'        => $job['channel'] ?? null,
+			'given_token'    => null !== $given,
+			'given_at'       => $body['scheduled_at'] ?? null,
+			'status'         => $job['status'] ?? null,
+			'db_at'          => $job['scheduled_at'] ?? null,
+			'db_token_state' => null === $job ? null : ( empty( $job['dispatch_token'] ) ? 'none' : ( 0 === strpos( (string) $job['dispatch_token'], 'go:' ) ? 'claimed' : 'set' ) ),
+		);
+		$stop = static function ( string $reason, string $message, bool $mark_failed = false ) use ( $job_id, $job, $log ) {
+			if ( $mark_failed && $job ) {
+				SocialSync_DB::transition( $job_id, 'scheduled', array( 'status' => 'failed', 'error' => $message ) );
+			}
+			SocialSync_Logger::info( 'go.stop', 'Trả lời n8n: KHÔNG đăng lượt này', $log + array( 'reason' => $reason, 'message' => $message, 'marked_failed' => $mark_failed ) );
+			return self::reply( 200, array( 'go' => false, 'reason' => $reason, 'message' => $message, 'job_id' => $job_id ) );
+		};
+
+		if ( ! $job ) {
+			return $stop( 'not_found', 'Không tìm thấy lượt' );
+		}
+		if ( 'scheduled' !== $job['status'] ) {
+			return $stop( 'status_' . $job['status'], 'Lượt không còn ở trạng thái Đã lên lịch (có thể đã hủy lịch, trả về Chờ duyệt)' );
+		}
+		$token = empty( $job['dispatch_token'] ) ? null : (string) $job['dispatch_token'];
+		if ( null !== $token && 0 === strpos( $token, 'go:' ) ) {
+			return $stop( 'already_claimed', 'Một lần chạy khác đã nhận lượt này để đăng' );
+		}
+		if ( null !== $token && ! hash_equals( $token, (string) $given ) ) {
+			return $stop( 'token_mismatch', 'Lượt đã được đổi giờ hoặc gửi lại; lần chạy này đã cũ' );
+		}
+		if ( null === $token ) {
+			$db_at = strtotime( (string) $job['scheduled_at'] . ' UTC' );
+			if ( ! $at || ! $db_at || abs( $db_at - $at ) > 120 ) {
+				return $stop( 'time_changed', 'Giờ đăng của lượt đã đổi; lần chạy này đã cũ' );
+			}
+		}
+		$post = get_post( (int) $job['post_id'] );
+		if ( ! $post ) {
+			return $stop( 'post_deleted', 'Bài gốc đã bị xoá nên không đăng', true );
+		}
+		$unpub = SocialSync_Log_Page::unpublished_reason( $post );
+		if ( null !== $unpub ) {
+			return $stop( 'post_unpublished', $unpub, true );
+		}
+		$block = SocialSync_Publish_Hook::block_reason( $post );
+		if ( null !== $block ) {
+			return $stop( 'blocked', 'Bị chặn ở WordPress: ' . $block, true );
+		}
+		$claimed = SocialSync_DB::transition_token( $job_id, 'scheduled', $token, array( 'dispatch_token' => 'go:' . ( $token ?? 'auto' ) ) );
+		if ( ! $claimed ) {
+			return $stop( 'race', 'Lượt vừa bị đổi giờ / hủy lịch đúng lúc này' );
+		}
+		SocialSync_Logger::info( 'go.ok', 'Trả lời n8n: đăng lượt này (đã nhận lượt)', $log );
+		return self::reply( 200, array( 'go' => true, 'job_id' => $job_id ) );
 	}
 
 	private static function reply( int $code, array $data ): WP_REST_Response {

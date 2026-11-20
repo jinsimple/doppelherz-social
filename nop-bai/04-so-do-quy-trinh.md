@@ -73,10 +73,15 @@ sequenceDiagram
   C-->>N: JSON
   N->>N: Kiểm tra độ dài, từ cấm; gắn khuyến cáo (loại P), giá, link UTM
   N->>WP: Từng lượt: "Chờ duyệt" (hoặc "Bỏ qua" nếu X / N trên Pinterest)
-  R->>WP: Xem, sửa nội dung, chọn giờ → Duyệt
-  WP->>WP: Khóa lượt (chỉ đổi nếu còn "Chờ duyệt")
-  WP->>N: Lệnh đăng đã duyệt
+  R->>WP: Trung tâm SocialSync: xem, sửa nội dung, chọn giờ → Duyệt
+  WP->>WP: Khóa lượt (chỉ đổi nếu còn "Chờ duyệt") + cấp mã lệnh
+  WP->>N: Lệnh đăng đã duyệt (kèm mã lệnh)
   N->>N: Chờ tới giờ đăng của từng kênh
+  opt Người duyệt đổi giờ / hủy lịch trong lúc chờ
+    R->>WP: Đổi giờ (mã lệnh mới, gửi lệnh mới) hoặc Hủy lịch (về Chờ duyệt)
+  end
+  N->>WP: Còn đăng lượt này không? (mã lệnh)
+  WP-->>N: Có (và nhận lượt) / Không (đã đổi giờ, hủy, bài bị gỡ)
   N->>F: Đăng ảnh + nội dung
   N->>WP: Facebook: "Đã đăng" + link
   N->>M: Tiêu đề, mô tả, ảnh, link, board
@@ -89,7 +94,7 @@ Số đo:
 - **Có bước duyệt** (bài #74): tài khoản người chấm bấm "Duyệt và đăng ngay", cả hai kênh lên trong vòng 20 giây.
 - **Claude:** 5–17 giây cho mỗi lần gọi.
 
-### A3. Luồng n8n chính (28 khối, hai đường vào)
+### A3. Luồng n8n chính (33 khối, hai đường vào)
 
 ```mermaid
 flowchart TD
@@ -104,7 +109,10 @@ flowchart TD
   AW["Nhận lệnh đăng đã duyệt<br/>(webhook thứ hai)"] --> AB["Dựng lượt đã duyệt"] --> G
   G --> S["Báo WordPress: đã lên lịch"] --> X["Xác nhận WordPress đã nhận<br/>(bị từ chối → dừng, chống đăng trùng)"]
   X --> L{{"Lần lượt từng kênh"}}
-  L -- "từng lượt" --> WT["Chờ tới giờ đăng"] --> IF{"Facebook?"}
+  L -- "từng lượt" --> WT["Chờ tới giờ đăng"] --> ASK["Hỏi WordPress: còn đăng không?<br/>(mã lệnh / giờ hẹn)"] --> GO{"Còn đăng?"}
+  GO -- "không: đã hủy / đổi giờ" --> L
+  GO -- "không trả lời rõ" --> FAILCB["Báo lượt Lỗi, không đăng"] --> L
+  GO -- có --> IF{"Facebook?"}
   IF -- có --> FB1["Facebook: đăng bài"] --> FB2["Facebook: đọc kết quả"]
   IF -- không --> P0{"Pinterest có ảnh?"}
   P0 -- có --> P1["Gửi sang Make"] --> P2["Đọc kết quả"]
@@ -136,55 +144,57 @@ stateDiagram-v2
   [*] --> pending: Bài xuất bản lần đầu
   pending --> needs_review: AI viết xong (Duyệt bắt buộc)
   pending --> scheduled: AI viết xong (Tự đăng)
-  pending --> skipped: AI phân loại X / tin thương hiệu trên Pinterest
+  pending --> skipped: AI phân loại X / tin thương hiệu hoặc bài không ảnh trên Pinterest
   pending --> failed: n8n không nhận / luồng lỗi
   needs_review --> scheduled: Người duyệt bấm Duyệt
   needs_review --> rejected: Người duyệt từ chối / bỏ kênh
+  scheduled --> needs_review: Hủy lịch (giữ nội dung đã duyệt)
+  scheduled --> scheduled: Đổi giờ / Đăng ngay (mã lệnh mới)
   scheduled --> published: Kênh trả link bài
   scheduled --> failed: Kênh từ chối / luồng lỗi
-  scheduled --> skipped: Pin không có ảnh
-  failed --> pending: Nút "Đồng bộ lại"
+  scheduled --> skipped: Pin không có ảnh (lớp chặn cuối)
+  failed --> pending: "Cho AI viết lại" / "Đồng bộ lại"
+  failed --> scheduled: "Đăng lại nội dung đã duyệt" (không gọi AI)
   published --> [*]
 ```
 
-Ba lớp chống đăng trùng:
+Bốn lớp chống đăng trùng / đăng sai:
 1. Khóa duy nhất (bài, kênh) trong cơ sở dữ liệu.
-2. Nút Duyệt chỉ đổi lượt còn ở "Chờ duyệt", bằng câu UPDATE có điều kiện. Đã thử bấm duyệt lần hai: bị chặn.
+2. Nút Duyệt, Đồng bộ lại, Đổi giờ, Hủy lịch chỉ đổi lượt còn ở đúng trạng thái vừa đọc (UPDATE có điều kiện). Đã thử bấm duyệt lần hai: bị chặn.
 3. n8n chỉ đăng khi WordPress chấp nhận chuyển lượt sang "Đã lên lịch".
+4. Ngay trước khi đăng, n8n hỏi lại WordPress với **mã lệnh** của lần gửi. WordPress chỉ trả "đăng" khi lượt còn Đã lên lịch, mã lệnh khớp (lượt Tự đăng: giờ hẹn khớp), bài còn xuất bản và không bị chặn; đồng thời "nhận lượt" để Hủy lịch bấm cùng lúc không thắng được. Đã thử 11 tình huống ở tầng dữ liệu (20/11): sai/thiếu mã → không đăng; đúng mã → đăng một lần, hỏi lần hai bị từ chối; hủy khi đã nhận → bị chặn; hủy rồi lần chạy cũ hỏi → không đăng; Tự đăng đổi giờ → không đăng; sai mã bí mật → 401.
 
 ### A5. Màn hình trong WordPress (menu SocialSync)
 
+Bản 0.4.0 gộp *Chờ duyệt*, *Xem và duyệt* và *Nhật ký* thành **một trang: Trung tâm SocialSync**. Lý do và số đo trước/sau: xem đề xuất UX (đếm từ code): duyệt N bài từ 2N+1 xuống N+1 lần bấm; đăng → duyệt → xem kết quả từ 4 màn hình xuống 2 (trình soạn + Trung tâm).
+
 | Màn hình | Ai dùng | Làm gì |
 |---|---|---|
-| **Nhật ký đồng bộ** | Quản lý cửa hàng, Biên tập, Quản trị | Mỗi lượt một dòng: trạng thái, phân loại, người duyệt, nội dung, link bài, tương tác, link lần chạy n8n; cảnh báo lượt kẹt; nút Đồng bộ lại |
-| **Chờ duyệt (số bài)** | Như trên | Danh sách bài chờ duyệt → màn hình duyệt từng bài |
-| **Báo cáo** | Như trên | 7/30 ngày: tỉ lệ thành công từng kênh, thời gian lên kênh, AI hay mẫu, chi phí AI ước tính, số bài theo ngày, tương tác cao nhất, báo cáo tuần do Claude tóm tắt |
-| **Chạy thử doppelherz.vn** | Như trên | Đưa 3/5/10 bài thật mới nhất qua đúng luồng AI, không đăng |
+| **Trung tâm SocialSync** (menu chính, có số bài chờ duyệt) | Quản lý cửa hàng, Biên tập, Quản trị | Trái: danh sách *bài* với chip trạng thái từng kênh, tab Cần duyệt / Đã lên lịch / Đã đăng / Lỗi / Bỏ qua–Từ chối / Tất cả, tìm theo tên (không dấu) hoặc #ID. Phải: phân loại + lý do, nguồn nội dung, ảnh; form duyệt (sửa, bỏ kênh, chọn giờ, duyệt / đăng ngay, lý do từ chối chọn nhanh, duyệt xong tự mở bài kế); thẻ kết quả từng kênh (link bài, tương tác, lỗi đầy đủ, Đăng lại nội dung đã duyệt / Cho AI viết lại, **đổi giờ / đăng ngay / hủy lịch sau khi duyệt**); dòng thời gian. Tự cập nhật 15 giây khi có lượt đang xử lý, trừ khi đang sửa form |
+| Bảng **Mạng xã hội (SocialSync)** trong màn hình viết bài | Người viết | Trước khi đăng: chọn giờ từng kênh, để trống thì tự xếp. Sau khi bấm Đăng: hiện trạng thái từng kênh (tự hỏi lại mỗi 10 giây khi AI đang viết) và nút mở đúng bài trong Trung tâm |
+| Cột **Mạng xã hội** ở danh sách Bài viết / Sản phẩm | Biên tập | Chip trạng thái từng kênh, bấm vào mở bài trong Trung tâm |
+| **Báo cáo** | Như Trung tâm | 7/30 ngày: tỉ lệ thành công từng kênh, thời gian lên kênh, AI hay mẫu, chi phí AI ước tính, số bài theo ngày, tương tác cao nhất, báo cáo tuần do Claude tóm tắt |
+| **Nhật ký chi tiết** | Kỹ thuật, báo cáo | Tra cứu theo ngày / kênh / trạng thái, mỗi lượt một dòng, bảng tổng hợp |
+| **Chạy thử doppelherz.vn** | Như Trung tâm | Đưa 3/5/10 bài thật mới nhất qua đúng luồng AI, không đăng |
 | **Cấu hình** | Chỉ Quản trị | Chế độ duyệt, khung giờ, tối đa/ngày, khoảng cách, danh mục chặn, câu khuyến cáo, board Pinterest, webhook, mã xác minh Pinterest, mức log |
-| Ô **Lịch đăng mạng xã hội** trong màn hình viết bài | Người viết | Chọn giờ riêng cho từng kênh, để trống thì tự xếp |
 
-Wireframe màn hình duyệt:
+Wireframe Trung tâm SocialSync:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│ Duyệt nội dung: Omega-3 và sức khỏe tim mạch: ăn cá bao nhiêu là đủ?    │
-│ Phân loại: Kiến thức — Bài chia sẻ kiến thức dinh dưỡng, không giới…    │
-│ Nguồn nội dung: Claude viết (claude-opus-5-5, 1 lần gọi cho 2 kênh)     │
-├─────────────────────────────────────────────────────────────────────────┤
-│ [x] Facebook Fanpage                                                    │
-│  ⚠ Cảnh báo: có cụm từ quảng cáo sức khỏe rủi ro: … (nếu có)            │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │ Ăn cá bao nhiêu mỗi tuần là đủ để bổ sung omega-3? 🐟 …            │  │
-│  │ 👉 Xem chi tiết: https://…?utm_source=facebook …                   │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-│  Giờ đăng [ 19/11/2026 20:04 ]  (bộ xếp lịch đề xuất)                   │
-├─────────────────────────────────────────────────────────────────────────┤
-│ [x] Pinterest   Tiêu đề [ … ]  Mô tả [ … ]  Alt [ … ]  Board: …        │
-│  Giờ đăng [ 19/11/2026 20:04 ]                                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│ [ Duyệt và đăng theo giờ đã chọn ]  [ Duyệt và đăng ngay ]              │
-│ Lý do từ chối [ …………… ]            [ Từ chối toàn bộ ]                 │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─ Trung tâm SocialSync ───────────────────────── Chế độ: Duyệt bắt buộc · 07:00–22:00 · ≤10/ngày ─┐
+│ [Cần duyệt 2] [Đã lên lịch] [Đã đăng 6] [Lỗi] [Bỏ qua/Từ chối 4] [Tất cả]   🔍 Tìm tên bài / #ID │
+├──────────────────────────────┬───────────────────────────────────────────────────────────────────┤
+│ ▶ Vitamin D mùa đông…         │ Vitamin D mùa đông…   Bài viết #86 · Sửa bài · Xem trên website   │
+│   FB ◐ Chờ duyệt  Pin ◐ …     │ [Phân loại: Kiến thức + lý do] [Nguồn: Claude, token, giây] [Ảnh] │
+│   Viên uống Vitamin C…        │ ┌ [x] Facebook ─ ◐ Chờ duyệt ┐ ┌ [x] Pinterest ─ ◐ Chờ duyệt ┐      │
+│   FB ◐  Pin ◐                 │ │ nội dung (đếm ký tự,        │ │ tiêu đề / mô tả / alt       │      │
+│   5 thói quen ngủ ngon…       │ │ tô từ cấm khi gõ) · giờ     │ │ board · giờ đăng            │      │
+│   FB ● Đã đăng  Pin — thiếu ảnh│ └────────────────────────────┘ └─────────────────────────────┘      │
+│                               │ [Duyệt theo giờ] [Duyệt và đăng ngay] ☑ mở bài chờ duyệt tiếp theo │
+│                               │ Lý do từ chối: (Bài nội bộ)(Sai thông tin SP)(Cần duyệt pháp lý)… [Từ chối]│
+│                               │ ▸ Dòng thời gian                                                   │
+└──────────────────────────────┴───────────────────────────────────────────────────────────────────┘
+Đã lên lịch: thẻ kênh có [giờ mới][Lưu giờ mới] [Đăng ngay] [Hủy lịch] · Lỗi: [Đăng lại nội dung đã duyệt] [Cho AI viết lại]
 ```
 
 ---
@@ -201,9 +211,9 @@ flowchart TD
   C -- "P" --> XN["Tra sổ XNQC (chưa có)<br/>công dụng được phép nói"] --> G
   G["Claude viết nội dung theo kênh"] --> CK1["Kiểm tra luật cứng<br/>(độ dài, từ cấm)"] --> CK2["Claude rà soát tuân thủ lớp 2 (chưa có)"]
   CK2 --> IMG["Dựng ảnh Pin dọc 2:3 (chưa có)"]
-  IMG --> Q["Chờ duyệt (Marketing)"]
+  IMG --> Q["Trung tâm: chờ duyệt (Marketing)"]
   Q --> Q2{"Nhóm nhạy cảm?"}
-  Q2 -- có --> LG["Pháp chế duyệt lớp 2 (chưa có)"] --> SC
+  Q2 -- có --> LG["Người phụ trách pháp lý duyệt lớp 2 (chưa có)"] --> SC
   Q2 -- không --> SC["Xếp lịch rải đều"]
   SC --> PUB["Đăng Facebook / Pinterest"] --> LOG["Nhật ký"] --> REP["Báo cáo tuần<br/>+ lượt truy cập UTM qua GA4 (chưa có)"]
 ```
@@ -211,7 +221,7 @@ flowchart TD
 | Bước | Demo (đã chạy) | Bản chính thức (thêm) |
 |---|---|---|
 | Chọn bài | Chặn theo danh mục, PDF; Claude phân loại E/P/N/X | Danh mục chặn theo cấu trúc của doppelherz.vn; đo độ chính xác phân loại trên 20 bài mẫu |
-| Nội dung | Claude viết từ bài gốc, cấm từ rủi ro, khuyến cáo do code gắn | Tra sổ XNQC cho bài sản phẩm; rà soát tuân thủ lớp 2; bộ luật là file pháp chế sửa được |
+| Nội dung | Claude viết từ bài gốc, cấm từ rủi ro, khuyến cáo do code gắn | Tra sổ XNQC cho bài sản phẩm; rà soát tuân thủ lớp 2; bộ luật là file người phụ trách pháp lý (khách chỉ định) [Giả định] sửa được |
 | Duyệt | Một lớp, sửa được nội dung và giờ, chống duyệt trùng | Hai lớp cho nhóm nhạy cảm (hiện chỉ gắn cờ); nhắc việc duyệt qua email |
 | Ảnh Pinterest | Ảnh đại diện có sẵn | Ảnh dọc 1000×1500 theo 3 bố cục |
 | Lịch | Tự rải theo khung giờ, số bài/ngày, khoảng cách; giờ chọn tay | Lịch nội dung trên Google Sheet nếu khách cần |

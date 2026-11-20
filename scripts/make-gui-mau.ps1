@@ -3,6 +3,8 @@
 #
 # CANH BAO: neu scenario Make da co khoi "Create a Pin" va dang BAT, goi mau nay se tao 1 Pin that
 # (anh demo SocialSync, tro ve trang chu website).
+# Hoc lai cau truc (vi du sau khi them truong board): trong Make bam khoi Custom webhook -> "Redetermine data structure"
+# (Make hien "Waiting for data"), roi moi chay script nay.
 # Dia chi webhook lay tu MAKE_PINTEREST_WEBHOOK trong .env; script chi in host, khong in duong dan.
 
 $ErrorActionPreference = 'Stop'
@@ -27,6 +29,8 @@ $sample = [ordered]@{
   link        = 'https://shop.adaptivealgo.uk/?utm_source=pinterest&utm_medium=social&utm_campaign=socialsync'
   image_url   = 'https://shop.adaptivealgo.uk/wp-content/uploads/2026/11/socialsync-demo.jpg'
   alt_text    = 'Ảnh demo SocialSync'
+  # Ten board Pinterest theo bang ghep danh muc (US-009). Make can thay truong nay de router chon board.
+  board       = 'Làm đẹp'
 }
 $json = $sample | ConvertTo-Json -Depth 3
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)

@@ -1,6 +1,7 @@
 <?php
 /**
- * Duyệt nội dung trước khi đăng ("SocialSync → Chờ duyệt").
+ * Duyệt nội dung trước khi đăng. Giao diện nằm trong Trung tâm SocialSync (class-socialsync-hub.php);
+ * file này giữ logic duyệt/từ chối và thẻ duyệt từng kênh.
  *
  * Luồng: n8n viết nội dung xong báo lượt về trạng thái needs_review và dừng. Người duyệt (quyền edit_others_posts:
  * Administrator, Editor, Shop manager) xem, sửa nội dung, chọn giờ, rồi:
@@ -15,11 +16,144 @@ final class SocialSync_Review {
 
 	public const SLUG = 'socialsync-review';
 
-	/** Các cụm từ quảng cáo sức khỏe rủi ro: cảnh báo người duyệt (giống bộ lọc trong n8n). */
-	private const BANNED = '/(chữa\s+(khỏi|bệnh|trị|dứt)|điều\s+trị|đặc\s+trị|khỏi\s+hẳn|khỏi\s+bệnh|hết\s+bệnh|dứt\s+điểm|thay\s+thế\s+thuốc|100\s*%|cam\s+kết|thần\s+dược|số\s+1(?!\d)|tốt\s+nhất|duy\s+nhất|giảm\s+cân)/iu';
+	/**
+	 * Các cụm từ quảng cáo sức khỏe rủi ro: cảnh báo người duyệt (giống bộ lọc trong n8n).
+	 * BANNED_JS là cùng biểu thức, không có dấu phân cách, để assets/hub.js tô cụm từ ngay khi người duyệt gõ.
+	 */
+	public const BANNED_JS = '(chữa\s+(khỏi|bệnh|trị|dứt)|điều\s+trị|đặc\s+trị|khỏi\s+hẳn|khỏi\s+bệnh|hết\s+bệnh|dứt\s+điểm|thay\s+thế\s+thuốc|100\s*%|cam\s+kết|thần\s+dược|số\s+1(?!\d)|tốt\s+nhất|duy\s+nhất|giảm\s+cân)';
+	private const BANNED   = '/' . self::BANNED_JS . '/iu';
+
+	/** Mã lý do bỏ qua: bài không có ảnh (Pinterest). */
+	public const NO_IMAGE_CODE = 'no_image';
 
 	public static function init(): void {
 		add_action( 'admin_post_socialsync_review', array( __CLASS__, 'handle' ) );
+		add_action( 'admin_post_socialsync_schedule', array( __CLASS__, 'handle_schedule' ) );
+	}
+
+	/** Lượt đã lên lịch mà n8n đã "nhận" để đăng (đang đăng): không đổi giờ / hủy được nữa. */
+	public static function is_claimed( array $job ): bool {
+		return 0 === strpos( (string) ( $job['dispatch_token'] ?? '' ), 'go:' );
+	}
+
+	/**
+	 * Đổi giờ / đăng ngay / hủy lịch một lượt ĐÃ DUYỆT (trạng thái scheduled).
+	 * - Hủy: scheduled -> needs_review, giữ nguyên nội dung đã duyệt (không gọi AI). Lần chạy n8n đang chờ sẽ hỏi lại
+	 *   WordPress trước khi đăng, thấy lượt không còn scheduled nên bỏ.
+	 * - Đổi giờ / đăng ngay: mã lệnh mới + gửi lại lệnh đăng sang n8n. Lần chạy cũ thức dậy thấy mã lệnh không khớp nên bỏ.
+	 * Mọi thay đổi là UPDATE có điều kiện theo mã lệnh đã đọc: nếu n8n vừa nhận lượt (đang đăng) thì thao tác bị từ chối.
+	 */
+	public static function handle_schedule(): void {
+		$job_id = isset( $_POST['job_id'] ) ? absint( $_POST['job_id'] ) : 0;
+		check_admin_referer( 'socialsync_schedule_' . $job_id );
+		if ( ! current_user_can( SocialSync_Log_Page::CAP ) ) {
+			wp_die( 'Không có quyền.', 403 );
+		}
+		$op      = isset( $_POST['op'] ) ? sanitize_key( wp_unslash( $_POST['op'] ) ) : '';
+		$at_raw  = isset( $_POST['at'] ) ? sanitize_text_field( wp_unslash( $_POST['at'] ) ) : '';
+		$job     = SocialSync_DB::get_job( $job_id );
+		$post_id = $job ? (int) $job['post_id'] : 0;
+		$user    = wp_get_current_user();
+		$label   = $job ? ( SocialSync_Settings::CHANNELS[ $job['channel'] ] ?? $job['channel'] ) : '';
+		SocialSync_Logger::info( 'schedule.request', 'Người dùng đổi lịch lượt đã duyệt', array( 'job_id' => $job_id, 'op' => $op, 'at' => $at_raw, 'status' => $job['status'] ?? null, 'claimed' => $job ? self::is_claimed( $job ) : null, 'by_user' => $user->ID ) );
+
+		if ( ! $job || 'scheduled' !== $job['status'] ) {
+			self::back( $post_id, 'error', 'Lượt không còn ở trạng thái Đã lên lịch (có thể vừa đăng xong hoặc người khác vừa đổi). Xem trạng thái mới trên trang.' );
+		}
+		if ( self::is_claimed( $job ) ) {
+			self::back( $post_id, 'error', $label . ': n8n đã nhận lượt và đang đăng, không đổi giờ hay hủy được nữa.' );
+		}
+		$token = empty( $job['dispatch_token'] ) ? null : (string) $job['dispatch_token'];
+
+		if ( 'cancel' === $op ) {
+			$ok = SocialSync_DB::transition_token(
+				$job_id,
+				'scheduled',
+				$token,
+				array(
+					'status'         => 'needs_review',
+					'dispatch_token' => null,
+					'error'          => null,
+					// Ghi người + giờ hủy vào reviewed_* để dòng thời gian hiện đúng lúc hủy (duyệt lại sẽ ghi đè).
+					'reviewed_by'    => $user->ID,
+					'reviewed_at'    => SocialSync_DB::now(),
+					'review_note'    => sprintf( 'Hủy lịch bởi %s lúc %s', $user->display_name, wp_date( 'H:i d/m' ) ),
+				)
+			);
+			if ( ! $ok ) {
+				self::back( $post_id, 'error', $label . ': không hủy được vì lượt vừa đổi trạng thái (có thể n8n vừa nhận lượt để đăng).' );
+			}
+			$kept = SocialSync_Settings::approval_required() ? 'nội dung đã duyệt được giữ nguyên' : 'nội dung AI đã viết được giữ nguyên';
+			self::back( $post_id, 'success', $label . ': đã hủy lịch. Lượt trở về Chờ duyệt, ' . $kept . '; duyệt khi muốn đăng.' );
+		}
+
+		if ( ! in_array( $op, array( 'move', 'now' ), true ) ) {
+			self::back( $post_id, 'error', 'Thao tác không hợp lệ.' );
+		}
+		$post  = get_post( $post_id );
+		$unpub = $post ? SocialSync_Log_Page::unpublished_reason( $post ) : 'Bài gốc đã bị xoá';
+		if ( null !== $unpub ) {
+			self::back( $post_id, 'error', $unpub . '.' );
+		}
+		if ( 'pinterest' === $job['channel'] && ! get_post_thumbnail_id( $post_id ) ) {
+			self::back( $post_id, 'error', 'Bài không có ảnh đại diện nên không đăng được Pin. Thêm ảnh hoặc Hủy lịch.' );
+		}
+		$ts = time();
+		if ( 'move' === $op ) {
+			try {
+				$ts = ( new DateTimeImmutable( str_replace( 'T', ' ', $at_raw ), wp_timezone() ) )->getTimestamp();
+			} catch ( Exception $e ) {
+				self::back( $post_id, 'error', 'Giờ đăng không hợp lệ: ' . $at_raw );
+			}
+			if ( '' === $at_raw || $ts < time() + 60 ) {
+				self::back( $post_id, 'error', 'Giờ mới phải sau hiện tại ít nhất 1 phút. Muốn đăng luôn thì bấm “Đăng ngay”.' );
+			}
+		}
+		$old_at    = (string) $job['scheduled_at'];
+		$new_token = SocialSync_DB::new_token();
+		$note      = trim( (string) $job['review_note'] . ' · ' . sprintf( '%s bởi %s lúc %s', 'now' === $op ? 'Chuyển sang đăng ngay' : 'Đổi giờ sang ' . wp_date( 'H:i d/m', $ts ), $user->display_name, wp_date( 'H:i d/m' ) ), ' ·' );
+		$ok        = SocialSync_DB::transition_token( $job_id, 'scheduled', $token, array( 'scheduled_at' => gmdate( 'Y-m-d H:i:s', $ts ), 'dispatch_token' => $new_token, 'review_note' => $note ) );
+		if ( ! $ok ) {
+			self::back( $post_id, 'error', $label . ': không đổi được vì lượt vừa đổi trạng thái (có thể n8n vừa nhận lượt để đăng).' );
+		}
+		$content = json_decode( (string) $job['content'], true );
+		$result  = self::send_to_n8n( $post_id, array( $job + array( '_content' => is_array( $content ) ? $content : array(), '_ts' => $ts, '_token' => $new_token ) ) );
+		if ( ! $result['ok'] ) {
+			// Trả lại giờ + mã lệnh cũ: lần chạy n8n cũ vẫn hợp lệ, lượt đăng theo giờ cũ như trước.
+			SocialSync_DB::transition_token( $job_id, 'scheduled', $new_token, array( 'scheduled_at' => $old_at, 'dispatch_token' => $token, 'review_note' => $job['review_note'] ) );
+			self::back( $post_id, 'error', 'Không gửi được lệnh sang n8n nên giữ giờ cũ: ' . $result['error'] );
+		}
+		$warn = '';
+		$hm   = wp_date( 'H:i', $ts );
+		if ( $hm < (string) SocialSync_Settings::get( 'window_start' ) || $hm > (string) SocialSync_Settings::get( 'window_end' ) ) {
+			$warn = ' Lưu ý: giờ này nằm ngoài khung đăng ' . SocialSync_Settings::get( 'window_start' ) . '–' . SocialSync_Settings::get( 'window_end' ) . ' (vẫn đăng vì người duyệt chọn tay).';
+		}
+		SocialSync_Logger::info( 'schedule.moved', 'Đổi giờ lượt đã duyệt', array( 'job_id' => $job_id, 'from' => $old_at, 'to' => gmdate( 'Y-m-d H:i:s', $ts ), 'op' => $op, 'outside_window' => '' !== $warn ) );
+		self::back( $post_id, 'success', $label . ( 'now' === $op ? ': đã chuyển sang đăng ngay.' : ': đã đổi giờ đăng sang ' . wp_date( 'H:i d/m/Y', $ts ) . '.' ) . $warn );
+	}
+
+	/**
+	 * Cụm từ rủi ro trong nội dung một lượt (bỏ qua câu khuyến cáo do hệ thống gắn).
+	 *
+	 * @return string[]
+	 */
+	public static function banned_hits( array $job ): array {
+		$c    = json_decode( (string) $job['content'], true );
+		$c    = is_array( $c ) ? $c : array();
+		$text = 'facebook' === $job['channel'] ? (string) ( $c['message'] ?? '' ) : implode( ' ', array( $c['title'] ?? '', $c['description'] ?? '', $c['alt_text'] ?? '' ) );
+		return preg_match_all( self::BANNED, str_replace( (string) SocialSync_Settings::get( 'product_disclaimer' ), ' ', $text ), $m ) ? array_values( array_unique( $m[0] ) ) : array();
+	}
+
+	/**
+	 * Bài chờ duyệt kế tiếp (cũ nhất trước), trừ bài vừa xử lý. 0 nếu hết.
+	 */
+	public static function next_pending( int $exclude_post_id ): int {
+		global $wpdb;
+		return (int) $wpdb->get_var( $wpdb->prepare( 'SELECT post_id FROM ' . SocialSync_DB::table() . " WHERE status = 'needs_review' AND post_id <> %d ORDER BY id ASC LIMIT 1", $exclude_post_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+	}
+
+	public static function skip_code( array $job ): string {
+		return false !== mb_stripos( (string) $job['error'], 'không có ảnh' ) ? self::NO_IMAGE_CODE : 'other';
 	}
 
 	public static function pending_count(): int {
@@ -30,139 +164,65 @@ final class SocialSync_Review {
 		return (int) $wpdb->get_var( 'SELECT COUNT(DISTINCT post_id) FROM ' . SocialSync_DB::table() . " WHERE status = 'needs_review'" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 	}
 
+	/** Màn Chờ duyệt riêng đã gộp vào Trung tâm SocialSync. */
 	public static function url( int $post_id = 0 ): string {
-		$args = array( 'page' => self::SLUG );
-		if ( $post_id ) {
-			$args['post_id'] = $post_id;
-		}
-		return add_query_arg( $args, admin_url( 'admin.php' ) );
+		return SocialSync_Hub::url( $post_id, $post_id ? '' : 'review' );
 	}
 
-	public static function render(): void {
-		if ( ! current_user_can( SocialSync_Log_Page::CAP ) ) {
-			return;
-		}
-		$post_id = isset( $_GET['post_id'] ) ? absint( $_GET['post_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		echo '<div class="wrap">';
-		self::render_notice();
-		if ( $post_id ) {
-			self::render_form( $post_id );
-		} else {
-			self::render_list();
-		}
-		echo '</div>';
-	}
-
-	private static function render_list(): void {
-		global $wpdb;
-		$rows  = (array) $wpdb->get_results( 'SELECT * FROM ' . SocialSync_DB::table() . " WHERE status = 'needs_review' ORDER BY id ASC", ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$posts = array();
-		foreach ( $rows as $r ) {
-			$posts[ (int) $r['post_id'] ][] = $r;
-		}
-		echo '<h1>Chờ duyệt</h1>';
-		echo '<p>AI đã viết nội dung cho các bài dưới đây. Nội dung chỉ được đăng sau khi có người duyệt. Đổi sang tự đăng trong SocialSync → Cấu hình.</p>';
-		if ( ! $posts ) {
-			echo '<p><strong>Không có bài nào chờ duyệt.</strong></p>';
-			return;
-		}
-		echo '<table class="widefat striped" style="max-width:1000px"><thead><tr><th>Bài</th><th>Phân loại</th><th>Kênh và giờ đề xuất</th><th>Nội dung</th><th></th></tr></thead><tbody>';
-		foreach ( $posts as $post_id => $jobs ) {
-			$first    = $jobs[0];
-			$content  = json_decode( (string) $first['content'], true );
-			$channels = array();
-			foreach ( $jobs as $j ) {
-				$channels[] = ( SocialSync_Settings::CHANNELS[ $j['channel'] ] ?? $j['channel'] ) . ': ' . ( $j['scheduled_at'] ? get_date_from_gmt( (string) $j['scheduled_at'], 'H:i d/m' ) : '—' );
-			}
-			printf(
-				'<tr><td><strong>%s</strong><br><span class="description">%s #%d</span></td><td>%s%s</td><td>%s</td><td>%s</td><td><a class="button button-primary" href="%s">Xem và duyệt</a></td></tr>',
-				esc_html( (string) get_the_title( $post_id ) ),
-				esc_html( 'product' === $first['post_type'] ? 'Sản phẩm' : 'Bài viết' ),
-				(int) $post_id,
-				esc_html( SocialSync_Report::CLASS_LABELS[ $first['classification'] ?? '' ] ?? '—' ),
-				! empty( $content['sensitive'] ) ? ' <span style="color:#b32d2e">· nhóm nhạy cảm</span>' : '',
-				esc_html( implode( ' · ', $channels ) ),
-				esc_html( 'ai' === $first['content_source'] ? 'Claude viết' : 'Mẫu cố định' ),
-				esc_url( self::url( $post_id ) )
-			);
-		}
-		echo '</tbody></table>';
-	}
-
-	private static function render_form( int $post_id ): void {
-		global $wpdb;
-		$jobs = (array) $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . SocialSync_DB::table() . " WHERE post_id = %d AND status = 'needs_review' ORDER BY channel ASC", $post_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		printf( '<h1>Duyệt nội dung: %s</h1>', esc_html( (string) get_the_title( $post_id ) ) );
-		printf( '<p><a href="%s">← Danh sách chờ duyệt</a> · <a href="%s" target="_blank" rel="noopener">Xem bài trên website</a> · <a href="%s">Mọi lượt của bài</a></p>', esc_url( self::url() ), esc_url( (string) get_permalink( $post_id ) ), esc_url( add_query_arg( array( 'page' => SocialSync_Log_Page::SLUG, 'post_id' => $post_id ), admin_url( 'admin.php' ) ) ) );
-		if ( ! $jobs ) {
-			echo '<p><strong>Bài này không còn lượt nào chờ duyệt.</strong> Có thể đã có người duyệt hoặc từ chối.</p>';
-			return;
-		}
-		$first   = $jobs[0];
-		$content = json_decode( (string) $first['content'], true );
-		$content = is_array( $content ) ? $content : array();
-		?>
-		<table class="widefat" style="max-width:1000px;margin-bottom:16px"><tbody>
-			<tr><th style="width:200px">Phân loại</th><td>
-				<strong><?php echo esc_html( SocialSync_Report::CLASS_LABELS[ $first['classification'] ?? '' ] ?? 'Chưa phân loại' ); ?></strong>
-				<?php if ( ! empty( $content['classification_reason'] ) ) : ?> — <?php echo esc_html( (string) $content['classification_reason'] ); ?><?php endif; ?>
-				<?php if ( ! empty( $content['sensitive'] ) ) : ?>
-					<p style="color:#b32d2e;margin:4px 0 0"><strong>Nhóm nhạy cảm</strong> (trẻ em, phụ nữ mang thai hoặc nhắc tới nhân viên y tế): ở bản chính thức cần thêm pháp chế duyệt.</p>
-				<?php endif; ?>
-			</td></tr>
-			<tr><th>Nguồn nội dung</th><td><?php echo esc_html( ( 'ai' === $first['content_source'] ? 'Claude viết' : 'Mẫu cố định' ) . ( $first['content_source_reason'] ? ' — ' . $first['content_source_reason'] : '' ) ); ?></td></tr>
-		</tbody></table>
-
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="socialsync_review">
-			<input type="hidden" name="post_id" value="<?php echo (int) $post_id; ?>">
-			<?php wp_nonce_field( 'socialsync_review_' . $post_id ); ?>
-			<?php foreach ( $jobs as $job ) : ?>
-				<?php self::render_channel( $job ); ?>
-			<?php endforeach; ?>
-
-			<p>
-				<button type="submit" name="decision" value="approve" class="button button-primary button-large">Duyệt và đăng theo giờ đã chọn</button>
-				<button type="submit" name="decision" value="approve_now" class="button button-large">Duyệt và đăng ngay</button>
-			</p>
-			<p style="margin-top:24px">
-				<label>Lý do từ chối (bắt buộc khi từ chối)<br><input type="text" name="note" class="large-text" placeholder="Ví dụ: bài nội bộ, không đăng mạng xã hội"></label>
-			</p>
-			<p><button type="submit" name="decision" value="reject" class="button" onclick="return confirm('Từ chối: nội dung sẽ không được đăng lên các kênh. Tiếp tục?');">Từ chối toàn bộ</button></p>
-		</form>
-		<?php
-	}
-
-	private static function render_channel( array $job ): void {
+	/**
+	 * Thẻ duyệt một kênh (dùng trong Trung tâm SocialSync). Tên trường form giữ nguyên jobs[{id}][...] để handle() không đổi.
+	 * Ô có data-ss-max: hub.js đếm ký tự; ô có data-ss-scan: hub.js tô cụm từ rủi ro khi gõ.
+	 */
+	public static function render_channel( array $job, string $thumb_url, ?array $draft = null ): void {
 		$id      = (int) $job['id'];
 		$channel = (string) $job['channel'];
-		$c       = json_decode( (string) $job['content'], true );
-		$c       = is_array( $c ) ? $c : array();
-		$when    = $job['scheduled_at'] ? get_date_from_gmt( (string) $job['scheduled_at'], 'Y-m-d\TH:i' ) : '';
-		$name    = static fn( string $f ) => esc_attr( "jobs[{$id}][{$f}]" );
-		$text    = 'facebook' === $channel ? (string) ( $c['message'] ?? '' ) : implode( ' ', array( $c['title'] ?? '', $c['description'] ?? '', $c['alt_text'] ?? '' ) );
-		$hits    = preg_match_all( self::BANNED, str_replace( (string) SocialSync_Settings::get( 'product_disclaimer' ), ' ', $text ), $m ) ? array_unique( $m[0] ) : array();
+		// Pinterest bắt buộc có ảnh: bài không có ảnh thì bỏ chọn sẵn kênh này và cảnh báo.
+		$no_pin = 'pinterest' === $channel && '' === $thumb_url;
+		$c      = json_decode( (string) $job['content'], true );
+		$c      = is_array( $c ) ? $c : array();
+		$when   = $job['scheduled_at'] ? get_date_from_gmt( (string) $job['scheduled_at'], 'Y-m-d\TH:i' ) : '';
+		$d      = is_array( $draft['jobs'][ $id ] ?? null ) ? $draft['jobs'][ $id ] : null;
+		if ( $d ) {
+			// Điền lại phần người duyệt đã gõ trước khi bị trả lỗi.
+			foreach ( array( 'message', 'title', 'description', 'alt_text' ) as $k ) {
+				if ( isset( $d[ $k ] ) ) {
+					$c[ $k ] = (string) $d[ $k ];
+				}
+			}
+			$when = (string) ( $d['at'] ?? '' );
+		}
+		$checked = $d ? ! empty( $d['enabled'] ) : ! $no_pin;
+		$name   = static fn( string $f ) => esc_attr( "jobs[{$id}][{$f}]" );
+		$hits   = self::banned_hits( $job );
 		?>
-		<div style="background:#fff;border:1px solid #dcdcde;padding:12px 16px;margin-bottom:16px;max-width:1000px">
-			<h2 style="margin-top:0">
-				<label><input type="checkbox" name="<?php echo $name( 'enabled' ); ?>" value="1" checked> <?php echo esc_html( SocialSync_Settings::CHANNELS[ $channel ] ?? $channel ); ?></label>
-				<span class="description" style="font-size:13px;font-weight:normal"> — bỏ chọn để không đăng kênh này (lượt sẽ chuyển sang Bị từ chối)</span>
-			</h2>
-			<?php if ( $hits ) : ?>
-				<p style="color:#b32d2e"><strong>Cảnh báo:</strong> có cụm từ quảng cáo sức khỏe rủi ro: <?php echo esc_html( implode( ', ', $hits ) ); ?></p>
+		<article class="ss-card ss-st-needs_review<?php echo $checked ? '' : ' is-off'; ?>" data-ss-card data-ss-channel="<?php echo esc_attr( $channel ); ?>"<?php echo 'pinterest' === $channel && '' === $thumb_url ? ' data-ss-noimage="1"' : ''; ?>>
+			<header>
+				<label class="ss-toggle"><input type="checkbox" name="<?php echo $name( 'enabled' ); ?>" value="1"<?php echo $checked ? ' checked' : ''; ?> data-ss-enable> <strong><?php echo esc_html( SocialSync_Settings::CHANNELS[ $channel ] ?? $channel ); ?></strong></label>
+				<?php echo SocialSync_Hub::chip( $job ); // phpcs:ignore WordPress.Security.EscapeOutput -- đã escape trong chip(). ?>
+			</header>
+			<p class="ss-meta ss-off-hint">Bỏ chọn = không đăng kênh này (lượt chuyển sang Đã từ chối).</p>
+			<?php if ( $no_pin ) : ?>
+				<p class="ss-alert ss-alert-red"><strong>Không đăng được Pin:</strong> bài không có ảnh đại diện, mà mỗi Pin bắt buộc có ảnh. Kênh đã được bỏ chọn sẵn. Thêm ảnh đại diện cho bài rồi tải lại trang để đăng Pin.</p>
 			<?php endif; ?>
+			<p class="ss-alert ss-alert-warn" data-ss-banned<?php echo $hits ? '' : ' hidden'; ?>>⚠ Cụm từ quảng cáo sức khỏe rủi ro: <span><?php echo esc_html( implode( ', ', $hits ) ); ?></span></p>
 			<?php if ( 'facebook' === $channel ) : ?>
-				<p><label>Nội dung bài Facebook (gồm cả link và hashtag)<br>
-					<textarea name="<?php echo $name( 'message' ); ?>" rows="12" class="large-text"><?php echo esc_textarea( (string) ( $c['message'] ?? '' ) ); ?></textarea></label></p>
+				<label class="ss-field">Nội dung bài Facebook <span class="ss-meta">(gồm link và hashtag)</span>
+					<textarea name="<?php echo $name( 'message' ); ?>" rows="12" data-ss-max="5000" data-ss-scan><?php echo esc_textarea( (string) ( $c['message'] ?? '' ) ); ?></textarea></label>
 			<?php else : ?>
-				<p><label>Tiêu đề Pin (tối đa 100 ký tự)<br><input type="text" maxlength="100" name="<?php echo $name( 'title' ); ?>" class="large-text" value="<?php echo esc_attr( (string) ( $c['title'] ?? '' ) ); ?>"></label></p>
-				<p><label>Mô tả Pin (tối đa 500 ký tự)<br><textarea maxlength="500" name="<?php echo $name( 'description' ); ?>" rows="5" class="large-text"><?php echo esc_textarea( (string) ( $c['description'] ?? '' ) ); ?></textarea></label></p>
-				<p><label>Mô tả ảnh (alt text)<br><input type="text" maxlength="500" name="<?php echo $name( 'alt_text' ); ?>" class="large-text" value="<?php echo esc_attr( (string) ( $c['alt_text'] ?? '' ) ); ?>"></label></p>
-				<p class="description">Board: <?php echo esc_html( (string) ( $c['board'] ?? SocialSync_Settings::get( 'default_board' ) ) ); ?> · Link: <?php echo esc_html( (string) ( $c['link'] ?? '' ) ); ?></p>
+				<label class="ss-field">Tiêu đề Pin
+					<input type="text" maxlength="100" name="<?php echo $name( 'title' ); ?>" value="<?php echo esc_attr( (string) ( $c['title'] ?? '' ) ); ?>" data-ss-max="100" data-ss-scan></label>
+				<label class="ss-field">Mô tả Pin
+					<textarea maxlength="500" name="<?php echo $name( 'description' ); ?>" rows="5" data-ss-max="500" data-ss-scan><?php echo esc_textarea( (string) ( $c['description'] ?? '' ) ); ?></textarea></label>
+				<label class="ss-field">Mô tả ảnh (alt text)
+					<input type="text" maxlength="500" name="<?php echo $name( 'alt_text' ); ?>" value="<?php echo esc_attr( (string) ( $c['alt_text'] ?? '' ) ); ?>" data-ss-max="500" data-ss-scan></label>
+				<p class="ss-meta">Board: <?php echo esc_html( (string) ( $c['board'] ?? SocialSync_Settings::get( 'default_board' ) ) ); ?> · Ảnh Pin = ảnh đại diện của bài · Link: <?php echo esc_html( (string) ( $c['link'] ?? '' ) ); ?></p>
 			<?php endif; ?>
-			<p><label>Giờ đăng (giờ website) <input type="datetime-local" name="<?php echo $name( 'at' ); ?>" value="<?php echo esc_attr( $when ); ?>"></label>
-				<span class="description">Giờ đề xuất do bộ xếp lịch chọn. Giờ đã qua thì đăng ngay.</span></p>
-		</div>
+			<label class="ss-field ss-when">Giờ đăng <span class="ss-meta">(giờ website; do bộ xếp lịch đề xuất, giờ đã qua thì đăng ngay)</span>
+				<input type="datetime-local" name="<?php echo $name( 'at' ); ?>" value="<?php echo esc_attr( $when ); ?>"></label>
+			<?php if ( $job['scheduled_at'] && strtotime( (string) $job['scheduled_at'] . ' UTC' ) < time() ) : ?>
+				<p class="ss-alert ss-alert-warn">Giờ đề xuất đã qua: bấm duyệt thì kênh này đăng ngay. Muốn đăng sau, chọn giờ mới rồi bấm “Duyệt và đăng theo giờ đã chọn”.</p>
+			<?php endif; ?>
+		</article>
 		<?php
 	}
 
@@ -183,11 +243,20 @@ final class SocialSync_Review {
 		SocialSync_Logger::info( 'review.submit', 'Người duyệt gửi quyết định', array( 'post_id' => $post_id, 'decision' => $decision, 'by_user' => $user, 'job_ids' => array_column( $jobs, 'id' ) ) );
 
 		if ( ! $jobs ) {
-			self::back( $post_id, 'error', 'Bài không còn lượt nào chờ duyệt (có thể người khác vừa duyệt).' );
+			self::back( $post_id, 'error', 'Bài không còn lượt nào chờ duyệt' . self::handled_by( $post_id ) . '.' );
+		}
+
+		// Bài đã vào thùng rác / về nháp / riêng tư: link bài không mở được nên không cho duyệt đăng (từ chối vẫn được).
+		$post  = get_post( $post_id );
+		$unpub = $post ? SocialSync_Log_Page::unpublished_reason( $post ) : 'Bài gốc đã bị xoá';
+		if ( null !== $unpub && 'reject' !== $decision ) {
+			SocialSync_Logger::warn( 'review.unpublished', 'Chặn duyệt: bài không còn xuất bản', array( 'post_id' => $post_id, 'post_status' => $post ? $post->post_status : null ) );
+			self::back( $post_id, 'error', $unpub . '. Xuất bản lại bài rồi duyệt, hoặc Từ chối.' );
 		}
 
 		if ( 'reject' === $decision ) {
 			if ( '' === $note ) {
+				self::save_draft( $post_id, $form, $note );
 				self::back( $post_id, 'error', 'Cần ghi lý do khi từ chối.' );
 			}
 			$done = 0;
@@ -195,7 +264,7 @@ final class SocialSync_Review {
 				$done += SocialSync_DB::transition( (int) $job['id'], 'needs_review', array( 'status' => 'rejected', 'review_note' => $note, 'reviewed_by' => $user, 'reviewed_at' => $now, 'error' => 'Bị từ chối: ' . $note ) ) ? 1 : 0;
 			}
 			SocialSync_Logger::info( 'review.rejected', 'Từ chối nội dung', array( 'post_id' => $post_id, 'note' => $note, 'rejected' => $done ) );
-			self::back( 0, 'success', sprintf( 'Đã từ chối %d lượt của bài #%d.', $done, $post_id ) );
+			self::back( $post_id, 'success', sprintf( 'Đã từ chối %d lượt của bài “%s”.', $done, html_entity_decode( (string) get_the_title( $post_id ), ENT_QUOTES, 'UTF-8' ) ), true );
 		}
 
 		if ( ! in_array( $decision, array( 'approve', 'approve_now' ), true ) ) {
@@ -216,20 +285,27 @@ final class SocialSync_Review {
 				continue;
 			}
 			if ( 'facebook' === $job['channel'] ) {
-				$content['message'] = trim( sanitize_textarea_field( (string) ( $f['message'] ?? '' ) ) );
+				$content['message'] = self::clean_text( (string) ( $f['message'] ?? '' ), true );
 				if ( '' === $content['message'] || mb_strlen( $content['message'] ) > 5000 ) {
 					$errors[] = 'Nội dung Facebook rỗng hoặc dài quá 5.000 ký tự.';
 				}
 			} else {
-				$content['title']       = trim( sanitize_text_field( (string) ( $f['title'] ?? '' ) ) );
-				$content['description'] = trim( sanitize_textarea_field( (string) ( $f['description'] ?? '' ) ) );
-				$content['alt_text']    = trim( sanitize_text_field( (string) ( $f['alt_text'] ?? '' ) ) );
+				$content['title']       = self::clean_text( (string) ( $f['title'] ?? '' ), false );
+				$content['description'] = self::clean_text( (string) ( $f['description'] ?? '' ), true );
+				$content['alt_text']    = self::clean_text( (string) ( $f['alt_text'] ?? '' ), false );
+				if ( ! get_post_thumbnail_id( $post_id ) ) {
+					SocialSync_Logger::warn( 'review.pinterest_no_image', 'Người duyệt chọn đăng Pin nhưng bài không có ảnh đại diện', array( 'post_id' => $post_id, 'job_id' => $id ) );
+					$errors[] = 'Bài không có ảnh đại diện nên không đăng được Pin. Bỏ chọn Pinterest, hoặc thêm ảnh đại diện cho bài rồi duyệt lại.';
+				}
 				if ( '' === $content['title'] || mb_strlen( $content['title'] ) > 100 || mb_strlen( $content['description'] ) > 500 || mb_strlen( $content['alt_text'] ) > 500 ) {
 					$errors[] = 'Nội dung Pinterest sai độ dài (tiêu đề 1–100, mô tả ≤ 500, alt ≤ 500 ký tự).';
 				}
 			}
 			$ts = time();
-			if ( 'approve' === $decision && ! empty( $f['at'] ) ) {
+			if ( 'approve' === $decision && empty( $f['at'] ) ) {
+				// Bấm "theo giờ đã chọn" mà ô giờ trống: không âm thầm đăng ngay.
+				$errors[] = 'Chọn giờ đăng cho ' . ( SocialSync_Settings::CHANNELS[ $job['channel'] ] ?? $job['channel'] ) . ', hoặc bấm “Duyệt và đăng ngay”.';
+			} elseif ( 'approve' === $decision ) {
 				try {
 					$ts = max( time(), ( new DateTimeImmutable( str_replace( 'T', ' ', (string) $f['at'] ), wp_timezone() ) )->getTimestamp() );
 				} catch ( Exception $e ) {
@@ -238,7 +314,9 @@ final class SocialSync_Review {
 			}
 			$changed = array();
 			foreach ( array( 'message', 'title', 'description', 'alt_text' ) as $k ) {
-				if ( array_key_exists( $k, $content ) && ( $before[ $k ] ?? null ) !== $content[ $k ] ) {
+				// So với bản gốc đã chuẩn hoá xuống dòng + khoảng trắng đầu/cuối, để chỉ ghi "đã sửa" khi người duyệt sửa thật.
+				$orig = isset( $before[ $k ] ) ? trim( str_replace( array( "\r\n", "\r" ), "\n", (string) $before[ $k ] ) ) : null;
+				if ( array_key_exists( $k, $content ) && $orig !== $content[ $k ] ) {
 					$changed[] = $k;
 				}
 			}
@@ -252,9 +330,11 @@ final class SocialSync_Review {
 		}
 		if ( $errors ) {
 			SocialSync_Logger::warn( 'review.invalid', 'Form duyệt không hợp lệ', array( 'post_id' => $post_id, 'errors' => $errors ) );
-			self::back( $post_id, 'error', implode( ' ', array_unique( $errors ) ) );
+			self::save_draft( $post_id, $form, $note );
+			self::back( $post_id, 'error', implode( ' ', array_unique( $errors ) ) . ' Phần bạn vừa sửa vẫn được giữ trên form.' );
 		}
 		if ( ! array_filter( $plans, static fn( $p ) => ! $p['skip'] ) ) {
+			self::save_draft( $post_id, $form, $note );
 			self::back( $post_id, 'error', 'Chưa chọn kênh nào để đăng. Muốn bỏ cả bài thì dùng Từ chối.' );
 		}
 
@@ -267,11 +347,13 @@ final class SocialSync_Review {
 				SocialSync_DB::transition( $id, 'needs_review', array( 'status' => 'rejected', 'review_note' => 'Người duyệt bỏ kênh này', 'reviewed_by' => $user, 'reviewed_at' => $now, 'error' => 'Người duyệt bỏ kênh này' ) );
 				continue;
 			}
-			$ok = SocialSync_DB::transition(
+			$token = SocialSync_DB::new_token();
+			$ok    = SocialSync_DB::transition(
 				$id,
 				'needs_review',
 				array(
-					'status'       => 'scheduled',
+					'status'         => 'scheduled',
+					'dispatch_token' => $token,
 					'content'      => wp_json_encode( $plan['content'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES ),
 					'scheduled_at' => gmdate( 'Y-m-d H:i:s', $plan['ts'] ),
 					'reviewed_by'  => $user,
@@ -281,28 +363,66 @@ final class SocialSync_Review {
 				)
 			);
 			if ( $ok ) {
-				$approved[] = $job + array( '_content' => $plan['content'], '_ts' => $plan['ts'] );
+				$approved[] = $job + array( '_content' => $plan['content'], '_ts' => $plan['ts'], '_token' => $token );
 			}
 			SocialSync_Logger::info( 'review.approved', $ok ? 'Duyệt lượt' : 'Bỏ qua: lượt vừa được người khác xử lý', array( 'job_id' => $id, 'post_id' => $post_id, 'channel' => $job['channel'], 'edited' => $plan['changed'], 'at' => SocialSync_Scheduler::fmt( $plan['ts'] ), 'mode' => $decision ) );
 		}
 		if ( ! $approved ) {
-			self::back( 0, 'error', 'Không duyệt được lượt nào (có thể người khác vừa duyệt).' );
+			self::back( $post_id, 'error', 'Không duyệt được lượt nào' . self::handled_by( $post_id ) . '.' );
 		}
 
 		// 3. Gửi lệnh đăng sang n8n. Lỗi thì trả lượt về chờ duyệt để bấm lại.
 		$result = self::send_to_n8n( $post_id, $approved );
 		if ( ! $result['ok'] ) {
 			foreach ( $approved as $job ) {
-				SocialSync_DB::transition( (int) $job['id'], 'scheduled', array( 'status' => 'needs_review', 'error' => 'Không gửi được lệnh đăng sang n8n: ' . $result['error'] ) );
+				SocialSync_DB::transition( (int) $job['id'], 'scheduled', array( 'status' => 'needs_review', 'dispatch_token' => null, 'error' => 'Không gửi được lệnh đăng sang n8n: ' . $result['error'] ) );
 			}
 			self::back( $post_id, 'error', 'Không gửi được lệnh đăng sang n8n, lượt đã trả về Chờ duyệt: ' . $result['error'] );
 		}
 		$labels = array_map( static fn( $j ) => ( SocialSync_Settings::CHANNELS[ $j['channel'] ] ?? $j['channel'] ) . ' lúc ' . SocialSync_Scheduler::fmt( (int) $j['_ts'] ), $approved );
-		self::back( 0, 'success', 'Đã duyệt bài #' . $post_id . ': ' . implode( '; ', $labels ) . '. Xem kết quả ở Nhật ký đồng bộ.' );
+		self::back( $post_id, 'success', 'Đã duyệt bài “' . html_entity_decode( (string) get_the_title( $post_id ), ENT_QUOTES, 'UTF-8' ) . '”: ' . implode( '; ', $labels ) . '. Kết quả hiện ở thẻ kênh của bài (trang tự cập nhật).', true );
+	}
+
+	/**
+	 * Làm sạch chữ người duyệt gửi lên. Trình duyệt gửi xuống dòng dạng \r\n còn nội dung AI lưu dạng \n: không chuẩn hoá thì
+	 * mọi lần duyệt đều bị ghi "Người duyệt sửa: message" (sai bằng chứng duyệt) và bài đăng lẫn \r (lỗi L8, 20/11).
+	 */
+	private static function clean_text( string $raw, bool $multiline ): string {
+		$raw = str_replace( array( "\r\n", "\r" ), "\n", $raw );
+		return trim( $multiline ? sanitize_textarea_field( $raw ) : sanitize_text_field( $raw ) );
+	}
+
+	/** Form duyệt bị trả lại vì lỗi: giữ phần người duyệt vừa gõ (10 phút) để điền lại, không bắt gõ lại từ đầu. */
+	private static function save_draft( int $post_id, array $form, string $note ): void {
+		set_transient( 'socialsync_review_draft_' . get_current_user_id() . '_' . $post_id, array( 'jobs' => $form, 'note' => $note ), 600 );
+		SocialSync_Logger::debug( 'review.draft_saved', 'Giữ bản sửa của người duyệt sau lỗi kiểm tra', array( 'post_id' => $post_id, 'job_ids' => array_keys( $form ), 'has_note' => '' !== $note ) );
+	}
+
+	/** Lấy (và xoá) bản sửa đã giữ. @return array{jobs: array, note: string}|null */
+	public static function take_draft( int $post_id ): ?array {
+		$key   = 'socialsync_review_draft_' . get_current_user_id() . '_' . $post_id;
+		$draft = get_transient( $key );
+		if ( ! is_array( $draft ) ) {
+			return null;
+		}
+		delete_transient( $key );
+		SocialSync_Logger::debug( 'review.draft_restored', 'Điền lại bản sửa của người duyệt', array( 'post_id' => $post_id ) );
+		return array( 'jobs' => (array) ( $draft['jobs'] ?? array() ), 'note' => (string) ( $draft['note'] ?? '' ) );
+	}
+
+	/** " — Lan đã duyệt lúc 20:03" nếu bài vừa được người khác xử lý (để người đến sau biết ai, lúc nào). */
+	private static function handled_by( int $post_id ): string {
+		global $wpdb;
+		$row = $wpdb->get_row( $wpdb->prepare( 'SELECT status, reviewed_by, reviewed_at FROM ' . SocialSync_DB::table() . ' WHERE post_id = %d AND reviewed_at IS NOT NULL ORDER BY reviewed_at DESC LIMIT 1', $post_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		if ( ! $row ) {
+			return ' (có thể người khác vừa xử lý)';
+		}
+		$who = get_userdata( (int) $row['reviewed_by'] );
+		return sprintf( ': %s đã %s lúc %s', $who ? $who->display_name : '#' . $row['reviewed_by'], 'rejected' === $row['status'] ? 'từ chối' : 'duyệt', get_date_from_gmt( (string) $row['reviewed_at'], 'H:i d/m' ) );
 	}
 
 	/** @param array<int, array<string, mixed>> $approved */
-	private static function send_to_n8n( int $post_id, array $approved ): array {
+	public static function send_to_n8n( int $post_id, array $approved ): array {
 		$thumb = (int) get_post_thumbnail_id( $post_id );
 		$img   = $thumb ? wp_get_attachment_image_src( $thumb, 'full' ) : false;
 		$jobs  = array();
@@ -311,6 +431,8 @@ final class SocialSync_Review {
 				'job_id'                => (int) $job['id'],
 				'channel'               => (string) $job['channel'],
 				'scheduled_at'          => gmdate( 'c', (int) $job['_ts'] ),
+				// n8n gửi lại mã này khi hỏi "còn đăng không?" sau lúc chờ; đổi giờ / hủy lịch làm mã cũ hết hiệu lực.
+				'dispatch_token'        => $job['_token'] ?? null,
 				'content'               => $job['_content'],
 				'content_source'        => $job['content_source'],
 				'content_source_reason' => $job['content_source_reason'],
@@ -337,19 +459,40 @@ final class SocialSync_Review {
 		return SocialSync_Dispatcher::send( $payload, array( 'post_id' => $post_id, 'job_ids' => array_column( $jobs, 'job_id' ) ), (string) SocialSync_Settings::get( 'approve_url' ) );
 	}
 
-	private static function back( int $post_id, string $type, string $message ): void {
-		set_transient( 'socialsync_review_notice_' . get_current_user_id(), array( 'type' => $type, 'message' => $message ), 120 );
-		wp_safe_redirect( self::url( $post_id ) );
+	/**
+	 * Quay về Trung tâm. $done = vừa duyệt/từ chối xong: nếu người duyệt để tick "mở bài tiếp theo" thì chọn
+	 * bài chờ duyệt kế tiếp (cũ nhất trước), không thì ở lại bài vừa xử lý để xem kết quả.
+	 */
+	private static function back( int $post_id, string $type, string $message, bool $done = false ): void {
+		$target = $post_id;
+		$tab    = '';
+		$link   = null;
+		if ( $done ) {
+			$want_next = ! empty( $_POST['next'] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- đã check_admin_referer trong handle().
+			$next      = $want_next ? self::next_pending( $post_id ) : 0;
+			if ( $next ) {
+				$target   = $next;
+				$tab      = 'review';
+				$message .= ' Đang mở bài chờ duyệt tiếp theo.';
+				$link     = array( 'url' => SocialSync_Hub::url( $post_id ) . '#ss-detail', 'text' => 'Xem lại bài vừa xử lý' );
+			} elseif ( $want_next ) {
+				$message .= ' Đã hết bài chờ duyệt.';
+			}
+			SocialSync_Logger::debug( 'review.next', 'Chọn bài hiển thị sau khi xử lý', array( 'post_id' => $post_id, 'want_next' => $want_next, 'next_post_id' => $next, 'target' => $target ) );
+		}
+		set_transient( 'socialsync_review_notice_' . get_current_user_id(), array( 'type' => $type, 'message' => $message, 'link' => $link ), 120 );
+		wp_safe_redirect( SocialSync_Hub::url( $target, $tab ) . '#ss-detail' );
 		exit;
 	}
 
-	private static function render_notice(): void {
+	public static function render_notice(): void {
 		$key    = 'socialsync_review_notice_' . get_current_user_id();
 		$notice = get_transient( $key );
 		if ( ! is_array( $notice ) ) {
 			return;
 		}
 		delete_transient( $key );
-		printf( '<div class="notice notice-%s"><p>%s</p></div>', 'success' === $notice['type'] ? 'success' : 'error', esc_html( (string) $notice['message'] ) );
+		$link = is_array( $notice['link'] ?? null ) ? ' <a href="' . esc_url( (string) $notice['link']['url'] ) . '">' . esc_html( (string) $notice['link']['text'] ) . ' →</a>' : '';
+		printf( '<div class="notice notice-%s"><p>%s%s</p></div>', 'success' === $notice['type'] ? 'success' : 'error', esc_html( (string) $notice['message'] ), $link ); // phpcs:ignore WordPress.Security.EscapeOutput -- $link đã escape.
 	}
 }

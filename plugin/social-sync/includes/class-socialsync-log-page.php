@@ -10,7 +10,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class SocialSync_Log_Page {
 
-	public const SLUG     = 'socialsync';
+	public const SLUG     = 'socialsync-log';
 	public const CAP      = 'edit_others_posts';
 	private const PER_PAGE = 20;
 
@@ -33,7 +33,7 @@ final class SocialSync_Log_Page {
 		'published'    => '#007017',
 		'failed'       => '#b32d2e',
 		'skipped'      => '#646970',
-		'rejected'     => '#b32d2e',
+		'rejected'     => '#6b5b95', // Tím xám: quyết định có chủ đích của người duyệt, không phải sự cố.
 	);
 
 	public static function init(): void {
@@ -70,12 +70,12 @@ final class SocialSync_Log_Page {
 			: array( 'rows' => array(), 'total' => 0 );
 		?>
 		<div class="wrap">
-			<h1>Nhật ký đồng bộ</h1>
-			<p>Mỗi dòng là một lượt đưa một bài lên một kênh. Lượt mới tạo khi bài viết hoặc sản phẩm được xuất bản lần đầu. Giờ hiển thị theo giờ của website.</p>
+			<h1>Nhật ký chi tiết</h1>
+			<p>Trang tra cứu theo ngày/kênh/trạng thái cho kỹ thuật và báo cáo. Việc hằng ngày (duyệt, theo dõi, đồng bộ lại) làm ở <a href="<?php echo esc_url( SocialSync_Hub::url() ); ?>">Trung tâm SocialSync</a>. Mỗi dòng là một lượt đưa một bài lên một kênh. Lượt mới tạo khi bài viết hoặc sản phẩm được xuất bản lần đầu. Giờ hiển thị theo giờ của website.</p>
 			<?php self::render_notice(); ?>
 			<?php $waiting = SocialSync_Review::pending_count(); ?>
 			<?php if ( $waiting ) : ?>
-				<div class="notice notice-warning inline"><p><strong><?php echo (int) $waiting; ?> bài đang chờ duyệt.</strong> <a href="<?php echo esc_url( SocialSync_Review::url() ); ?>">Mở danh sách chờ duyệt</a></p></div>
+				<div class="notice notice-warning inline"><p><strong><?php echo (int) $waiting; ?> bài đang chờ duyệt.</strong> <a href="<?php echo esc_url( SocialSync_Review::url() ); ?>">Mở hàng đợi duyệt trong Trung tâm</a></p></div>
 			<?php endif; ?>
 
 			<?php self::render_filters( $filters ); ?>
@@ -201,7 +201,7 @@ final class SocialSync_Log_Page {
 					<a href="<?php echo esc_url( (string) get_edit_post_link( $post_id ) ); ?>"><strong><?php echo esc_html( '' !== $title ? $title : '(không có tiêu đề)' ); ?></strong></a>
 					<br><span class="description"><?php echo esc_html( ( 'product' === $job['post_type'] ? 'Sản phẩm' : 'Bài viết' ) . ' #' . $post_id ); ?></span>
 					· <a href="<?php echo esc_url( (string) get_permalink( $post_id ) ); ?>" target="_blank" rel="noopener">xem</a>
-					· <a href="<?php echo esc_url( add_query_arg( array( 'page' => self::SLUG, 'post_id' => $post_id ), admin_url( 'admin.php' ) ) ); ?>">mọi lượt của bài</a>
+					· <a href="<?php echo esc_url( SocialSync_Hub::url( $post_id ) ); ?>">mở trong Trung tâm</a>
 				<?php else : ?>
 					<em>(bài #<?php echo (int) $post_id; ?> đã bị xoá)</em>
 				<?php endif; ?>
@@ -278,7 +278,7 @@ final class SocialSync_Log_Page {
 		<?php
 	}
 
-	private static function render_actions( array $job ): void {
+	public static function render_actions( array $job ): void {
 		if ( 'needs_review' === $job['status'] ) {
 			printf( '<a class="button button-primary button-small" href="%s">Xem và duyệt</a>', esc_url( SocialSync_Review::url( (int) $job['post_id'] ) ) );
 			return;
@@ -291,25 +291,70 @@ final class SocialSync_Log_Page {
 		$status  = (string) $job['status'];
 		$confirm = '';
 		if ( 'published' === $status ) {
-			$confirm = 'Bài này ĐÃ được đăng lên kênh. Đồng bộ lại sẽ tạo thêm một bài nữa. Tiếp tục?';
+			$confirm = 'Bài này ĐÃ được đăng lên kênh. Đăng lại sẽ tạo thêm một bài nữa. Tiếp tục?';
 		} elseif ( in_array( $status, array( 'pending', 'generating', 'scheduled' ), true ) ) {
-			$confirm = 'Lượt này có thể đã được đăng nhưng chưa báo về. Hãy kiểm tra trên kênh trước. Vẫn đồng bộ lại?';
+			$confirm = 'Lượt này có thể đã được đăng nhưng chưa báo về. Hãy kiểm tra trên kênh trước. Vẫn gửi lại?';
 		}
+		$rewrite_confirm = $confirm;
+		if ( 'X' === ( $job['classification'] ?? '' ) ) {
+			$rewrite_confirm = trim( $rewrite_confirm . ' Lần trước AI phân loại bài này là Không đồng bộ; gửi lại thì AI có thể lại phân loại như vậy.' );
+		}
+		if ( SocialSync_Settings::approval_required() && self::has_approved_content( $job ) ) {
+			$rewrite_confirm = trim( $confirm . ' AI sẽ viết lại từ đầu: nội dung người duyệt đã sửa sẽ bị thay và bài phải duyệt lại.' );
+		}
+		echo '<div class="ss-resync">';
+		// Lượt đã có nội dung người duyệt chốt mà đăng lỗi: ưu tiên gửi lại đúng nội dung đó, không gọi AI, không phải duyệt lại.
+		if ( self::can_reuse( $job ) ) {
+			self::resync_button( $job, 'reuse', 'Đăng lại nội dung đã duyệt', $confirm, 'button-primary' );
+		}
+		$label = 'published' === $status ? 'Đăng lại' : 'Đồng bộ lại';
+		if ( self::can_reuse( $job ) ) {
+			$label = 'Cho AI viết lại'; // Đứng cạnh nút "Đăng lại nội dung đã duyệt" thì cần nói rõ khác nhau ở đâu.
+		}
+		self::resync_button( $job, 'rewrite', $label, $rewrite_confirm, '' );
+		echo '</div>';
+	}
+
+	private static function resync_button( array $job, string $mode, string $label, string $confirm, string $class ): void {
 		?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" <?php echo $confirm ? 'onsubmit="return confirm(' . esc_attr( wp_json_encode( $confirm ) ) . ');"' : ''; ?>>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" <?php echo $confirm ? 'onsubmit="return confirm(' . esc_attr( (string) wp_json_encode( $confirm ) ) . ');"' : ''; ?>>
 			<input type="hidden" name="action" value="socialsync_resync">
 			<input type="hidden" name="job_id" value="<?php echo (int) $job['id']; ?>">
+			<input type="hidden" name="mode" value="<?php echo esc_attr( $mode ); ?>">
 			<?php wp_nonce_field( 'socialsync_resync_' . (int) $job['id'] ); ?>
-			<button type="submit" class="button button-small"><?php echo 'published' === $status ? 'Đăng lại' : 'Đồng bộ lại'; ?></button>
+			<button type="submit" class="button button-small <?php echo esc_attr( $class ); ?>"><?php echo esc_html( $label ); ?></button>
 		</form>
 		<?php
 	}
 
-	/** @return true|string true nếu được đồng bộ lại, ngược lại là lý do. */
-	private static function can_resync( array $job ) {
+	/** Lượt đã có nội dung được người duyệt chốt (hoặc tự đăng đã có nội dung AI viết). */
+	private static function has_approved_content( array $job ): bool {
+		$c = json_decode( (string) ( $job['content'] ?? '' ), true );
+		return is_array( $c ) && ( ! empty( $c['message'] ) || ! empty( $c['title'] ) ) && ( ! empty( $job['reviewed_at'] ) || ! SocialSync_Settings::approval_required() );
+	}
+
+	/** Gửi lại nguyên nội dung: chỉ cho lượt lỗi hoặc lượt đã lên lịch nhưng treo quá giờ. */
+	private static function can_reuse( array $job ): bool {
 		$status = (string) $job['status'];
-		if ( ! get_post( (int) $job['post_id'] ) ) {
+		$ok     = 'failed' === $status || ( 'scheduled' === $status && null !== self::warning( $job ) );
+		return $ok && self::has_approved_content( $job ) && true === self::can_resync( $job );
+	}
+
+	/** @return true|string true nếu được đồng bộ lại, ngược lại là lý do. */
+	public static function can_resync( array $job ) {
+		$status = (string) $job['status'];
+		$post   = get_post( (int) $job['post_id'] );
+		if ( ! $post ) {
 			return 'Bài gốc đã bị xoá';
+		}
+		$unpub = self::unpublished_reason( $post );
+		if ( null !== $unpub ) {
+			return $unpub;
+		}
+		// Bài bị chặn ở WordPress (danh mục chặn, tiêu đề PDF): đồng bộ lại sẽ đưa bài nội bộ sang AI, nên không cho.
+		$block = SocialSync_Publish_Hook::block_reason( $post );
+		if ( null !== $block ) {
+			return 'Bị chặn ở WordPress: ' . $block . '. Gỡ bài khỏi danh mục chặn (hoặc đổi tiêu đề) rồi mới đồng bộ được';
 		}
 		switch ( $status ) {
 			case 'failed':
@@ -323,8 +368,23 @@ final class SocialSync_Log_Page {
 		}
 	}
 
+	/** Bài không còn công khai (thùng rác, nháp, riêng tư, chờ xét) thì không duyệt / đăng lại được. Null nếu đang xuất bản. */
+	public static function unpublished_reason( WP_Post $post ): ?string {
+		if ( 'publish' === $post->post_status ) {
+			return null;
+		}
+		$labels = array(
+			'trash'   => 'trong thùng rác',
+			'draft'   => 'ở dạng nháp',
+			'private' => 'ở chế độ riêng tư',
+			'pending' => 'chờ xét duyệt trên website',
+			'future'  => 'hẹn giờ xuất bản trên website',
+		);
+		return 'Bài đang ' . ( $labels[ $post->post_status ] ?? 'ở trạng thái ' . $post->post_status ) . ' nên không đăng lên mạng xã hội được (link bài sẽ không mở được)';
+	}
+
 	/** Cảnh báo khi một lượt đứng quá lâu ở một trạng thái (PRD mục 11). */
-	private static function warning( array $job ): ?string {
+	public static function warning( array $job ): ?string {
 		$now     = time();
 		$status  = (string) $job['status'];
 		$created = strtotime( (string) $job['created_at'] . ' UTC' );
@@ -357,6 +417,7 @@ final class SocialSync_Log_Page {
 			self::redirect_with_notice( 'error', 'Không đồng bộ lại được: ' . $check );
 		}
 
+		$mode = isset( $_POST['mode'] ) && 'reuse' === sanitize_key( wp_unslash( $_POST['mode'] ) ) ? 'reuse' : 'rewrite';
 		SocialSync_Logger::info(
 			'resync.request',
 			'Người dùng bấm Đồng bộ lại',
@@ -366,12 +427,20 @@ final class SocialSync_Log_Page {
 				'channel'       => (string) $job['channel'],
 				'status_before' => (string) $job['status'],
 				'error_before'  => $job['error'],
+				'mode'          => $mode,
+				'can_reuse'     => self::can_reuse( $job ),
 				'by_user'       => get_current_user_id(),
 			)
 		);
 
-		SocialSync_DB::update_jobs(
-			array( $job_id ),
+		if ( 'reuse' === $mode ) {
+			self::resync_reuse( $job );
+		}
+
+		// Chuyển có điều kiện (từ đúng trạng thái vừa đọc): bấm đúp hoặc bấm ở hai tab chỉ gửi n8n một lần.
+		$ok = SocialSync_DB::transition(
+			$job_id,
+			(string) $job['status'],
 			array(
 				'status'                => 'pending',
 				'error'                 => null,
@@ -390,6 +459,10 @@ final class SocialSync_Log_Page {
 				'review_note'           => null,
 			)
 		);
+		if ( ! $ok ) {
+			SocialSync_Logger::warn( 'resync.race', 'Đồng bộ lại bị bỏ: lượt vừa đổi trạng thái (bấm đúp hoặc tab khác)', array( 'job_id' => $job_id, 'status_seen' => $job['status'] ) );
+			self::redirect_with_notice( 'error', 'Lượt vừa đổi trạng thái (có thể vừa bấm hai lần hoặc người khác vừa xử lý), nên không gửi lại. Xem trạng thái mới trên trang.' );
+		}
 
 		// Đồng bộ lại thì đăng ngay, không chờ số phút trễ trong cấu hình.
 		SocialSync_Dispatcher::kick(
@@ -404,7 +477,48 @@ final class SocialSync_Log_Page {
 			0
 		);
 
-		self::redirect_with_notice( 'success', sprintf( 'Đã gửi lại lượt #%d sang n8n. Tải lại trang sau vài giây để xem kết quả.', $job_id ) );
+		self::redirect_with_notice( 'success', sprintf( 'Đã gửi lại lượt #%d sang n8n để AI viết lại. Trang tự cập nhật khi có kết quả.', $job_id ) );
+	}
+
+	/**
+	 * Gửi lại NGUYÊN nội dung đã duyệt qua webhook "approved" (giống lúc bấm Duyệt và đăng ngay):
+	 * không gọi AI, không mất phần người duyệt đã sửa, không phải duyệt lại.
+	 */
+	private static function resync_reuse( array $job ): void {
+		$job_id  = (int) $job['id'];
+		$post_id = (int) $job['post_id'];
+		if ( ! self::can_reuse( $job ) ) {
+			SocialSync_Logger::warn( 'resync.reuse_denied', 'Không gửi lại nguyên nội dung được', array( 'job_id' => $job_id, 'status' => $job['status'], 'has_content' => self::has_approved_content( $job ) ) );
+			self::redirect_with_notice( 'error', 'Lượt này không có nội dung đã duyệt để gửi lại. Dùng “Đồng bộ lại” để AI viết mới.' );
+		}
+		if ( 'pinterest' === $job['channel'] && ! get_post_thumbnail_id( $post_id ) ) {
+			SocialSync_Logger::warn( 'resync.reuse_no_image', 'Gửi lại Pin nhưng bài không có ảnh đại diện', array( 'job_id' => $job_id, 'post_id' => $post_id ) );
+			self::redirect_with_notice( 'error', 'Bài không có ảnh đại diện nên không đăng được Pin. Thêm ảnh rồi thử lại.' );
+		}
+		$content = json_decode( (string) $job['content'], true );
+		$ts      = time();
+		$token   = SocialSync_DB::new_token();
+		$ok      = SocialSync_DB::transition(
+			$job_id,
+			(string) $job['status'],
+			array(
+				'status'         => 'scheduled',
+				'scheduled_at'   => gmdate( 'Y-m-d H:i:s', $ts ),
+				'dispatch_token' => $token, // Lần chạy cũ (nếu còn treo) sẽ không khớp mã này nên không đăng trùng.
+				'error'          => null,
+				'execution_id'   => null,
+			)
+		);
+		if ( ! $ok ) {
+			self::redirect_with_notice( 'error', 'Lượt vừa đổi trạng thái (có thể người khác vừa xử lý). Tải lại trang rồi thử lại.' );
+		}
+		$result = SocialSync_Review::send_to_n8n( $post_id, array( $job + array( '_content' => $content, '_ts' => $ts, '_token' => $token ) ) );
+		SocialSync_Logger::info( 'resync.reuse', $result['ok'] ? 'Gửi lại nguyên nội dung đã duyệt' : 'Gửi lại nội dung đã duyệt thất bại', array( 'job_id' => $job_id, 'post_id' => $post_id, 'channel' => $job['channel'], 'ok' => $result['ok'], 'error' => $result['error'] ?? null ) );
+		if ( ! $result['ok'] ) {
+			SocialSync_DB::transition( $job_id, 'scheduled', array( 'status' => 'failed', 'dispatch_token' => null, 'error' => 'Không gửi được lệnh đăng lại sang n8n: ' . $result['error'] ) );
+			self::redirect_with_notice( 'error', 'Không gửi được sang n8n: ' . $result['error'] );
+		}
+		self::redirect_with_notice( 'success', sprintf( 'Đã gửi lại nội dung đã duyệt của lượt #%d (%s) để đăng ngay. Trang tự cập nhật khi có kết quả.', $job_id, SocialSync_Settings::CHANNELS[ $job['channel'] ] ?? $job['channel'] ) );
 	}
 
 	private static function redirect_with_notice( string $type, string $message ): void {
@@ -421,7 +535,7 @@ final class SocialSync_Log_Page {
 		exit;
 	}
 
-	private static function render_notice(): void {
+	public static function render_notice(): void {
 		$key    = 'socialsync_notice_' . get_current_user_id();
 		$notice = get_transient( $key );
 		if ( ! is_array( $notice ) ) {
@@ -452,7 +566,7 @@ final class SocialSync_Log_Page {
 	}
 
 	/** Giờ UTC trong DB -> giờ site. */
-	private static function local( $utc ): string {
+	public static function local( $utc ): string {
 		if ( empty( $utc ) ) {
 			return '—';
 		}

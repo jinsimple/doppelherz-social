@@ -51,7 +51,7 @@ Bài đăng theo tháng, 2025-11 → 2026-10 (219 bài; cột phải đã loại
 ## 4. Điểm đau rút ra (kèm hệ quả cho thiết kế)
 
 1. **Đăng theo đợt, không theo lịch.** Hệ thống cần hàng đợi + lịch đăng rải đều, không phải "có bài là bắn ngay".
-2. **Website trộn nội dung người tiêu dùng với thông báo đại lý và tin nội bộ.** Đồng bộ mù sẽ đẩy thông báo chính sách đại lý lên fanpage 628K follower. Bắt buộc có bộ lọc danh mục + bước duyệt.
+2. **Website trộn nội dung người tiêu dùng với thông báo đại lý và tin nội bộ.** Đồng bộ mù sẽ đẩy thông báo chính sách đại lý lên fanpage (~628K follower theo kết quả tìm kiếm [Chưa xác minh]). Bắt buộc có bộ lọc danh mục + bước duyệt.
 3. **Ngành có điều kiện về quảng cáo.** Nội dung TPBVSK phải có cụm từ "Thực phẩm bảo vệ sức khỏe" và câu khuyến cáo "Thực phẩm này không phải là thuốc…" (Luật 75/2025/QH15, NĐ 342/2025 hiệu lực 15/02/2026). AI viết lại không được thêm công dụng ngoài bài gốc → prompt phải có ràng buộc tuân thủ + bước kiểm tra tự động + người duyệt.
 4. **Pinterest chưa hiện diện trên website** và API có rào cản: app mới ở Trial access thì Pin chỉ người tạo nhìn thấy; muốn công khai phải xin Standard access kèm video demo. Phải đưa vào mốc thời gian và rủi ro.
 5. **Kho 2125 bài cũ chưa được tái sử dụng.** Pinterest là kênh tìm kiếm, nội dung "kiến thức sức khỏe" (1.300 bài) là tài sản có thể đăng lại dần → lợi ích lớn nhất của dự án, không chỉ bài mới.
@@ -68,7 +68,7 @@ Bài đăng theo tháng, 2025-11 → 2026-10 (219 bài; cột phải đã loại
 
 - Chỉ quan sát từ bên ngoài; quy trình nội bộ, nhân sự marketing, công cụ đang dùng (ERP/DMS/CRM) chưa biết → là nội dung của bộ câu hỏi chẩn đoán.
 - Chưa đo tần suất đăng và tương tác trên Facebook; chưa xác minh doanh nghiệp có tài khoản Pinterest hay không (chỉ biết website không liên kết).
-- Phần pháp lý là tóm tắt từ nguồn thứ cấp, không thay cho ý kiến pháp chế của doanh nghiệp.
+- Phần pháp lý là tóm tắt từ nguồn thứ cấp, không thay cho ý kiến pháp lý của doanh nghiệp.
 
 ## Nguồn
 

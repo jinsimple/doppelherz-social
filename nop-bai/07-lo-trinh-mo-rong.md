@@ -17,7 +17,7 @@ Dự án số 1 (đồng bộ nội dung Website → Facebook, Pinterest) là d�
 | GĐ5 | Q1–Q2/2028 | Chấm công và đánh giá nhân sự | 40–100 triệu + thiết bị, bản quyền |
 | GĐ6 | Từ Q2/2028 | Tăng trưởng: chiến dịch truyền thông, gợi ý trả lời khách hàng, nhận đơn và tính chiết khấu tự động, dự báo nhập hàng | Báo giá theo từng hạng mục |
 
-Giai đoạn 1–3 chính là 3 hạng mục ưu tiên ở Câu 1, theo đúng thứ tự. Mỗi giai đoạn có một "cổng": chỉ sang giai đoạn sau khi giai đoạn trước đạt chỉ số đã thống nhất và ban chỉ đạo duyệt. Không ký trước ngân sách cho cả lộ trình.
+Giai đoạn 1–3 chính là 3 hạng mục ưu tiên ở Câu 1, theo đúng thứ tự. Mỗi giai đoạn có một "cổng": chỉ sang giai đoạn sau khi giai đoạn trước đạt chỉ số đã thống nhất và ban chỉ đạo chương trình (đề xuất thành lập, xem mục 5.1) duyệt. Không ký trước ngân sách cho cả lộ trình.
 
 ---
 
@@ -73,7 +73,7 @@ flowchart LR
 
 ### GĐ1 – Q1/2027: Dự án số 1 và đo hiện trạng
 
-- **Hạng mục:** (a) Dự án đồng bộ nội dung có cổng tuân thủ (Câu 2, ưu tiên 1 ở Câu 1). (b) Trong lúc khảo sát cho dự án số 1, phỏng vấn thêm trưởng 7 phòng ban để chấm lại bảng ưu tiên Câu 1 bằng số thật. (c) Đo hiện trạng (baseline), mỗi chỉ số đo 1–2 tuần: số giờ gom báo cáo bán hàng, số cuộc gọi hỏi chương trình tới admin, thời gian duyệt một đề xuất, số ngày tổng hợp công. (d) Việc nhanh không cần dự án: gắn UTM, bật tự tải hóa đơn đầu vào nếu phần mềm kế toán có sẵn tính năng.
+- **Hạng mục:** (a) Dự án đồng bộ nội dung có cổng tuân thủ (Câu 2, ưu tiên 1 ở Câu 1). (b) Trong lúc khảo sát cho dự án số 1, phỏng vấn thêm trưởng 6 phòng ban giả định trong đề để chấm lại bảng ưu tiên Câu 1 bằng số thật. (c) Đo hiện trạng (baseline), mỗi chỉ số đo 1–2 tuần: số giờ gom báo cáo bán hàng, số cuộc gọi hỏi chương trình tới admin, thời gian duyệt một đề xuất, số ngày tổng hợp công. (d) Việc nhanh không cần dự án: gắn UTM, bật tự tải hóa đơn đầu vào nếu phần mềm kế toán có sẵn tính năng.
 - **Sản phẩm bàn giao:** hệ thống chạy thật, tài liệu vận hành, bảng ưu tiên Câu 1 đã chấm lại, bảng số đo hiện trạng.
 - **Ngân sách:** 40–50 triệu kèm phí vận hành, theo báo giá Câu 2.
 - **Cổng sang GĐ2:**
@@ -95,11 +95,11 @@ flowchart LR
 
 ### GĐ3 – Q3/2027: Báo cáo bán hàng hợp nhất
 
-- **Hạng mục chính (ưu tiên 3 ở Câu 1):** lấy dữ liệu tự động từ ERP/DMS và từ sàn TMĐT; chuẩn hóa mã đại lý và mã sản phẩm; bảng điều khiển trên Looker Studio hoặc Power BI; AI viết tóm tắt biến động gửi trước giờ giao ban.
+- **Hạng mục chính (ưu tiên 3 ở Câu 1):** lấy dữ liệu tự động từ phần mềm bán hàng/kế toán đang dùng (ERP/DMS nếu có **[Chưa xác minh]**) và từ sàn TMĐT; chuẩn hóa mã đại lý và mã sản phẩm; bảng điều khiển trên Looker Studio hoặc Power BI; AI viết tóm tắt biến động gửi trước giờ giao ban.
 - **Mở rộng trên cùng đường dữ liệu:** cảnh báo lô cận hạn dùng cho Kho và Kinh doanh (KHO-1 ở Câu 1).
-- **Song song:** lập yêu cầu và so sánh 2–3 nền tảng văn phòng số cho GĐ4: MISA AMIS, Base, 1Office, hoặc mở rộng Google Workspace/Microsoft 365 mà công ty đang dùng. Chọn trước khi hết quý.
+- **Song song:** lập yêu cầu và so sánh 2–3 nền tảng văn phòng số cho GĐ4: MISA AMIS, Base, 1Office, hoặc mở rộng Google Workspace/Microsoft 365 mà công ty đang dùng, nếu có **[Chưa xác minh]**. Chọn trước khi hết quý.
 - **Ngân sách:** 40–80 triệu cho báo cáo + 10–20 triệu cho cảnh báo cận hạn dùng. Vận hành 0,5–3 triệu/tháng **[Suy luận]**.
-- **Điều kiện bắt đầu:** khảo sát GĐ1 xác nhận ERP/DMS xuất được dữ liệu. Nếu không xuất được, làm cảnh báo cận hạn dùng trước và đưa việc "mở đường dữ liệu" (làm việc với nhà cung cấp ERP) thành hạng mục riêng.
+- **Điều kiện bắt đầu:** khảo sát GĐ1 xác nhận ERP/DMS xuất được dữ liệu. Nếu không xuất được, làm cảnh báo cận hạn dùng trước và đưa việc "mở đường dữ liệu" (làm việc với nhà cung cấp phần mềm) thành hạng mục riêng.
 - **Cổng sang GĐ4:**
   - Số tự động khớp ≥ 99% với số Kế toán chốt cuối tháng, 2 tháng liên tiếp.
   - Báo cáo gửi đúng giờ ≥ 95% số ngày. Được dùng trong giao ban của ban giám đốc.
@@ -110,11 +110,11 @@ flowchart LR
 
 - **Hạng mục:**
   - Phê duyệt điện tử cho 5–7 loại đề xuất phổ biến nhất (nghỉ phép, tạm ứng, công tác phí, mua sắm, đề xuất chương trình bán hàng), theo ma trận phê duyệt từ GĐ2.
-  - Ký số văn bản nội bộ trước. Sau đó ký hợp đồng và biên bản đối chiếu với đại lý, nếu pháp chế đồng ý.
+  - Ký số văn bản nội bộ trước. Sau đó ký hợp đồng và biên bản đối chiếu với đại lý, nếu người phụ trách pháp lý (khách chỉ định) **[Giả định]** đồng ý.
   - Họp và giao ban: ghi âm → AI viết biên bản → danh sách việc có người phụ trách và hạn → nhắc việc tự động. Giao ban sáng dùng báo cáo của GĐ3.
   - Quy trình chuẩn (SOP) của 3–5 quy trình hay lỗi nhất được đưa lên hệ thống quản lý công việc.
 - **Cách triển khai:** thử với 1–2 phòng trong 4 tuần (gợi ý: Kế toán và Dịch vụ bán hàng, nơi có nhiều đề xuất), rồi mới mở toàn công ty. Có giai đoạn chạy song song giấy và điện tử, ngày kết thúc do ban giám đốc ấn định.
-- **Ngân sách:** triển khai 50–120 triệu **[Suy luận]**. Bản quyền tham khảo: gói MISA AMIS Văn phòng số Enterprise được nhà cung cấp niêm yết khoảng 160.000 đồng/người/tháng **[Chưa xác minh – bài viết có ghi lẫn năm 2024]**, tức khoảng 16 triệu/tháng cho mỗi 100 người dùng. Nếu dùng Google Workspace/Microsoft 365 sẵn có kèm AppSheet/Power Automate thì bản quyền thấp hơn nhưng công dựng cao hơn. Chứng thư chữ ký số tính phí theo năm **[Chưa xác minh giá]**.
+- **Ngân sách:** triển khai 50–120 triệu **[Suy luận]**. Bản quyền tham khảo: gói MISA AMIS Văn phòng số Enterprise được nhà cung cấp niêm yết khoảng 160.000 đồng/người/tháng **[Chưa xác minh – bài viết có ghi lẫn năm 2024]**, tức khoảng 16 triệu/tháng cho mỗi 100 người dùng. Nếu công ty đã có Google Workspace/Microsoft 365 và dùng kèm AppSheet/Power Automate thì bản quyền thấp hơn nhưng công dựng cao hơn. Chứng thư chữ ký số tính phí theo năm **[Chưa xác minh giá]**.
 - **Cổng sang GĐ5:**
   - ≥ 80% đề xuất thuộc 5–7 loại đã chọn đi qua hệ thống. Thời gian duyệt trung vị giảm ≥ 50% so với số đo GĐ1.
   - ≥ 90% biên bản giao ban có danh sách việc kèm người phụ trách và hạn.
@@ -125,7 +125,7 @@ flowchart LR
 - **Hạng mục:**
   - Chấm công: máy chấm công tại văn phòng, kho; chấm công GPS hoặc check-in tại điểm bán cho nhân viên thị trường; tự động đẩy dữ liệu công sang bảng lương.
   - Đánh giá: KPI kinh doanh lấy từ báo cáo GĐ3 (doanh số, độ phủ, đại lý mới); KPI khối văn phòng lấy từ hệ thống giao việc GĐ4 (đúng hạn, khối lượng). AI chỉ tổng hợp và viết nháp nhận xét. Người quản lý trực tiếp quyết định điểm.
-- **Nguyên tắc bắt buộc:** chạy song song với cách cũ 2 kỳ lương trước khi dùng thật. Quy chế KPI và chấm công phải được ban hành và thông báo cho người lao động trước. Không để AI tự quyết định lương, thưởng, kỷ luật. Dữ liệu vị trí chỉ thu trong giờ làm việc, có thông báo và đồng ý của người lao động theo quy định bảo vệ dữ liệu cá nhân **[Chưa xác minh chi tiết văn bản áp dụng, cần pháp chế]**.
+- **Nguyên tắc bắt buộc:** chạy song song với cách cũ 2 kỳ lương trước khi dùng thật. Quy chế KPI và chấm công phải được ban hành và thông báo cho người lao động trước. Không để AI tự quyết định lương, thưởng, kỷ luật. Dữ liệu vị trí chỉ thu trong giờ làm việc, có thông báo và đồng ý của người lao động theo quy định bảo vệ dữ liệu cá nhân **[Chưa xác minh chi tiết văn bản áp dụng, cần ý kiến pháp lý]**.
 - **Ngân sách:** triển khai 40–100 triệu + thiết bị chấm công + bản quyền phần mềm chấm công/lương **[Suy luận]**.
 - **Đo thành công:** chênh lệch công giữa hệ thống và cách cũ < 1% và có giải thích; thời gian tổng hợp công/tháng giảm ≥ 60% so với số đo GĐ1; số khiếu nại về công giảm; ≥ 90% nhân viên có KPI tự động cập nhật hằng tháng.
 
@@ -137,7 +137,7 @@ Thứ tự trong GĐ6 xếp theo điểm ở Câu 1 và theo điều kiện đã
 |---|---|---|---|
 | 1 | Chạy chiến dịch truyền thông: lập kế hoạch theo nhóm khách hàng, sinh nội dung qua lõi tuân thủ, đo bằng UTM + số bán hàng | UTM từ GĐ1 (≥ 2 quý dữ liệu), báo cáo bán hàng GĐ3 | 30–60 triệu |
 | 2 | Gợi ý trả lời tin nhắn khách hàng (fanpage, Zalo OA, chat sàn), nhân viên bấm gửi | Lõi tuân thủ GĐ1 đã chạy ổn ≥ 2 quý | 40–80 triệu |
-| 3 | Nhận đơn đại lý tự động + tính chiết khấu tự động | Sổ chương trình GĐ2, mã chuẩn GĐ3, API ERP | 80–200 triệu (phụ thuộc ERP) |
+| 3 | Nhận đơn đại lý tự động + tính chiết khấu tự động | Sổ chương trình GĐ2, mã chuẩn GĐ3, API của phần mềm bán hàng (nếu có) **[Chưa xác minh]** | 80–200 triệu (phụ thuộc phần mềm bán hàng) |
 | 4 | Dự báo nhu cầu để đặt hàng nhập khẩu | ≥ 2 năm dữ liệu bán hàng sạch từ GĐ3 | 60–120 triệu |
 
 ## 4. Tổng ngân sách và chỉ số
@@ -170,7 +170,7 @@ Ba nguyên tắc giữ chi phí thấp:
 | Nhà tài trợ (sponsor) | Một thành viên ban giám đốc | Duyệt ngân sách từng giai đoạn, mở cổng, giải quyết xung đột ưu tiên giữa các phòng |
 | Ban chỉ đạo | Sponsor + trưởng các phòng có dự án đang chạy + Kế toán trưởng + người quản lý dự án AI | Duyệt phạm vi, xếp lại ưu tiên mỗi quý |
 | Chủ nghiệp vụ (mỗi dự án) | Trưởng phòng hưởng lợi: Marketing (GĐ1), Kinh doanh/Dịch vụ bán hàng (GĐ2), Kinh doanh + Kế toán (GĐ3), HCNS (GĐ4–5) | Duyệt yêu cầu, nghiệm thu, cử người dùng thử |
-| Pháp chế / người phụ trách hồ sơ quảng cáo | Bộ phận đang duyệt nội dung quảng cáo **[Chưa xác minh công ty có pháp chế riêng]** | Duyệt bộ luật tuân thủ (GĐ1, GĐ6), quy chế dữ liệu nhân sự (GĐ5) |
+| Người phụ trách pháp lý quảng cáo (khách chỉ định) | Người hoặc đơn vị được khách giao duyệt nội dung quảng cáo **[Giả định – chưa biết là nội bộ hay thuê ngoài]** | Duyệt bộ luật tuân thủ (GĐ1, GĐ6), quy chế dữ liệu nhân sự (GĐ5) |
 | Quản lý dự án AI | Ứng viên | Lập kế hoạch, điều phối nhà cung cấp, kiểm soát chất lượng, báo cáo, chuyển giao |
 | Quản trị hệ thống | IT nội bộ hoặc đơn vị thuê ngoài | Tài khoản, phân quyền, sao lưu, khóa bí mật |
 
@@ -200,7 +200,7 @@ Tài liệu dùng chung: sổ quyết định, sổ rủi ro, sổ sự cố, nh
 | Dự án số 1 không đạt cổng, mất niềm tin cho cả lộ trình | Cổng đo bằng chỉ số đã thống nhất từ đầu. Nếu chưa đạt thì sửa trong tối đa 4 tuần trước khi mở GĐ2 |
 | ERP/DMS không xuất được dữ liệu, GĐ3 bị chặn | Phát hiện ngay ở khảo sát GĐ1. Có phương án đổi thứ tự (mục GĐ3) |
 | Người dùng không dùng hệ thống mới | Chủ nghiệp vụ cam kết từ đầu; thử ở phòng nhỏ trước; đo tỉ lệ sử dụng hằng tuần |
-| Quy định quảng cáo TPBVSK thay đổi | Bộ luật là file cấu hình do pháp chế cập nhật, không viết cứng trong code |
+| Quy định quảng cáo TPBVSK thay đổi | Bộ luật là file cấu hình do người phụ trách pháp lý cập nhật, không viết cứng trong code |
 | Chi phí vận hành tăng dần qua các năm | Theo dõi chi phí tháng so với dự toán; dùng lại nền chung; dữ liệu xuất được để có thể đổi nhà cung cấp |
 | Người lao động phản đối chấm công và KPI tự động | Ban hành quy chế trước, chạy song song 2 kỳ, AI không tự quyết định |
 

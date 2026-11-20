@@ -64,6 +64,56 @@ final class SocialSync_DB {
 		return $ok;
 	}
 
+	/**
+	 * Như transition() nhưng thêm điều kiện mã lệnh gửi n8n (dispatch_token) phải còn đúng như đã đọc.
+	 * Dùng cho: n8n "nhận lượt" trước khi đăng, người duyệt đổi giờ / hủy lịch. Hai bên tranh nhau thì chỉ một bên thắng.
+	 *
+	 * @param string|null          $token Mã lệnh đã đọc (null = lượt chưa có mã, ví dụ đường Tự đăng).
+	 * @param array<string, mixed> $fields
+	 */
+	public static function transition_token( int $job_id, string $from, ?string $token, array $fields ): bool {
+		global $wpdb;
+		$fields['updated_at'] = self::now();
+		$sets                 = array();
+		$values               = array();
+		foreach ( $fields as $column => $value ) {
+			if ( ! preg_match( '/^[a-z_]+$/', (string) $column ) ) {
+				continue;
+			}
+			if ( null === $value ) {
+				$sets[] = "`{$column}` = NULL";
+				continue;
+			}
+			$sets[]   = "`{$column}` = " . ( is_int( $value ) ? '%d' : '%s' );
+			$values[] = is_scalar( $value ) ? $value : wp_json_encode( $value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES );
+		}
+		$cond   = null === $token ? 'dispatch_token IS NULL' : 'dispatch_token = %s';
+		$args   = array_merge( $values, array( $job_id, $from ), null === $token ? array() : array( $token ) );
+		$sql    = 'UPDATE ' . self::table() . ' SET ' . implode( ', ', $sets ) . " WHERE id = %d AND status = %s AND {$cond}";
+		$rows   = $wpdb->query( $wpdb->prepare( $sql, $args ) ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$ok     = 1 === (int) $rows;
+		SocialSync_Logger::write(
+			$ok ? 'info' : 'warn',
+			'db.transition_token',
+			$ok ? "Chuyển lượt từ {$from} (đúng mã lệnh)" : "Không chuyển được lượt: không còn ở {$from} hoặc mã lệnh đã đổi",
+			array(
+				'job_id'    => $job_id,
+				'from'      => $from,
+				'to'        => $fields['status'] ?? null,
+				'token_set' => null !== $token,
+				'fields'    => array_keys( $fields ),
+				'rows'      => $rows,
+				'db_error'  => false === $rows ? $wpdb->last_error : null,
+			)
+		);
+		return $ok;
+	}
+
+	/** Mã lệnh mới cho một lần gửi lượt sang n8n. */
+	public static function new_token(): string {
+		return wp_generate_password( 24, false, false );
+	}
+
 	public static function install(): void {
 		global $wpdb;
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -95,6 +145,7 @@ final class SocialSync_DB {
   reviewed_by bigint(20) unsigned NULL,
   reviewed_at datetime NULL,
   review_note text NULL,
+  dispatch_token varchar(40) NULL,
   metrics longtext NULL,
   metrics_at datetime NULL,
   created_at datetime NOT NULL,

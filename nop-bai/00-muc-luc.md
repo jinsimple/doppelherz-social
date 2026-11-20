@@ -4,7 +4,7 @@ Bộ tài liệu trả lời đầy đủ Câu 1 và 7 mục của Câu 2. Sản
 
 | Phần đề | Tài liệu | Tóm tắt |
 |---|---|---|
-| Câu 1 – Khảo sát doanh nghiệp, đề xuất tự động hóa | [01-cau-1-khao-sat-tu-dong-hoa.md](01-cau-1-khao-sat-tu-dong-hoa.md) | Việc có thể tự động hóa ở 6 phòng ban (Kinh doanh tách 4 kênh OTC, ETC, MT, Online), chấm ưu tiên theo 5 tiêu chí, chọn 3 hạng mục làm trước |
+| Câu 1 – Khảo sát doanh nghiệp, đề xuất tự động hóa | [01-cau-1-khao-sat-tu-dong-hoa.md](01-cau-1-khao-sat-tu-dong-hoa.md) · [bản trực quan](https://claude.ai/artifact/FsKK78CG1AkM2sXtHRuBhn) | Việc có thể tự động hóa ở 6 phòng ban (Kinh doanh tách 4 kênh OTC, ETC, MT, Online), chấm ưu tiên theo 5 tiêu chí, chọn 3 hạng mục làm trước |
 | 2.1 Chẩn đoán hiện trạng | [02-1-chan-doan-hien-trang.md](02-1-chan-doan-hien-trang.md) | Những gì đo được từ bên ngoài (doppelherz.vn) + bộ câu hỏi khảo sát theo chủ đề |
 | 2.2 Kế hoạch triển khai | [02-2-ke-hoach-trien-khai.md](02-2-ke-hoach-trien-khai.md) | 8 tuần, các giai đoạn, nhân sự, công cụ, RACI, rủi ro |
 | 2.3 Báo giá | [02-3-bao-gia.md](02-3-bao-gia.md) | Hai phương án 42,4 và 49,9 triệu đồng cho năm đầu, đã gồm vận hành 12 tháng |

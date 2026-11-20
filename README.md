@@ -2,18 +2,56 @@
 
 Repo này là toàn bộ bài làm của tôi cho đề test vị trí **Quản lý dự án AI**: từ lúc đọc đề, phân tích, viết tài liệu, xây sản phẩm chạy thật, tới lúc kiểm thử.
 
-Đề Câu 2 yêu cầu đóng vai **đối tác tư vấn và triển khai**: khảo sát khách hàng, đưa giải pháp, báo giá trong 40–50 triệu đồng, và làm ra một hệ thống **tự đồng bộ nội dung từ Website lên Facebook và Pinterest**. Tôi làm đủ 2 câu của đề, và sản phẩm đang chạy thật.
+## Tóm tắt bài test
 
-Bạn không cần biết code. Mỗi bước dưới đây đều có **mục đích, việc đã làm, kết quả, và link để mở xem**.
+Đề có 2 câu về cùng một khách hàng là Doppelherz Việt Nam (doppelherz.vn). Tôi làm đủ cả 2 câu, và sản phẩm của Câu 2 đang chạy thật.
+
+| Câu | Đề hỏi | Tôi trả lời |
+|---|---|---|
+| **Câu 1** | Tìm hiểu công ty. Với 6 phòng ban đề giả định: việc nào ứng dụng được AI hoặc tự động hóa, công cụ gì, ưu tiên ra sao, lợi bao nhiêu, khó bao nhiêu. Chọn 3 hạng mục làm trước. | **45 việc** ở 9 nhóm (Kinh doanh tách 4 kênh), chấm điểm theo 5 tiêu chí, chọn **3 hạng mục làm trước** |
+| **Câu 2** | Đóng vai **đối tác tư vấn và triển khai**: khảo sát, đưa giải pháp, báo giá trong 40–50 triệu đồng, và làm hệ thống **tự đồng bộ nội dung từ Website lên Facebook và Pinterest**. | Đủ 7 mục của đề, báo giá **49,9 triệu đồng**, sản phẩm **chạy thật**: bài lên Facebook 7 giây, lên Pinterest 11 giây sau khi duyệt |
+
+**Mở chung cho cả bài:**
+- **Đề bài gốc:** [Bai_test_Quan_ly_du_an_AI.docx.md](Bai_test_Quan_ly_du_an_AI.docx.md)
+- **Toàn bộ bài nộp theo thứ tự của đề:** [nop-bai/00-muc-luc.md](nop-bai/00-muc-luc.md)
+
+Bạn không cần biết code. Mỗi phần dưới đây đều có **việc đã làm, kết quả, và link để mở xem**.
 
 ---
 
-## Đọc nhanh trong 2 phút
+## Câu 1. Khảo sát doanh nghiệp và đề xuất tự động hóa
+
+**Đọc ở đây:** [Trang Câu 1](https://claude.ai/artifact/FsKK78CG1AkM2sXtHRuBhn), có sơ đồ và bảng trực quan. Bản gốc dạng văn bản: [nop-bai/01-cau-1-khao-sat-tu-dong-hoa.md](nop-bai/01-cau-1-khao-sat-tu-dong-hoa.md).
+
+**Cách làm:**
+- **Hiểu công ty:** chỉ dùng đề bài và nguồn công khai. Số tự đo trên doppelherz.vn ngày 19/11/2026, ví dụ 46 file PDF thông báo chương trình bán hàng đăng công khai trong 1 ngày.
+- **Lập bản đồ:** 45 việc có thể tự động hóa ở HCNS, Kế toán, Kinh doanh (OTC, ETC, MT, Online), Kho, Dịch vụ bán hàng, Marketing. Mỗi việc có công cụ gợi ý, lợi ích ước tính, độ khó, mức ưu tiên.
+- **Chấm điểm:** 12 hạng mục ứng viên chấm theo 5 tiêu chí: lợi ích (nhân đôi), dễ triển khai, dữ liệu sẵn có, rủi ro thấp, tạo niềm tin. Tối đa 30 điểm.
+- **Đặt lên ma trận:** lợi ích × độ khó, chọn ở góc "lợi ích cao, dễ làm".
+
+**Ba hạng mục nên làm trước:**
+
+| Thứ tự | Hạng mục | Cho ai | Điểm |
+|---|---|---|---|
+| 1 | Dây chuyền nội dung đa kênh có cổng tuân thủ. Đây là dự án ở Câu 2. | Marketing | 25/30 |
+| 2 | Sổ chương trình bán hàng số và trợ lý tra cứu | Kinh doanh 4 kênh, Dịch vụ bán hàng | 25/30 |
+| 3 | Báo cáo bán hàng hợp nhất tự động | Ban giám đốc, Kinh doanh, Kế toán | 24/30 |
+
+**Vì sao là 3 việc này:**
+- **Dùng chung một nền:** làm cái sau rẻ hơn cái trước.
+- **Mỗi việc phục vụ một nhóm người khác nhau:** sau 3 dự án, cả Marketing, lực lượng bán hàng và ban giám đốc đều thấy kết quả.
+- **Mở đường cho việc lớn hơn:** hạng mục 2 là nền cho nhận đơn tự động và tính chiết khấu tự động. Đó là hai việc lợi ích lớn nhất nhưng khó nhất.
+
+**Giới hạn:** tôi không có số liệu nội bộ. Mọi con số giờ công là giả định để minh họa cách tính, có gắn nhãn, và sẽ chấm lại cùng trưởng các phòng sau buổi khảo sát.
+
+---
+
+## Câu 2. Dự án mẫu SocialSync: đồng bộ nội dung Website, Facebook, Pinterest
+
+### Đọc nhanh trong 2 phút
 
 | Bạn muốn xem | Mở ở đây |
 |---|---|
-| Đề bài gốc | [Bai_test_Quan_ly_du_an_AI.docx.md](Bai_test_Quan_ly_du_an_AI.docx.md) |
-| Toàn bộ bài nộp theo thứ tự của đề | [nop-bai/00-muc-luc.md](nop-bai/00-muc-luc.md) |
 | Sản phẩm đang chạy | https://shop.adaptivealgo.uk (tài khoản dùng thử gửi kèm bài nộp) |
 | Hướng dẫn dùng có ảnh, từng bước | [nop-bai/08-huong-dan-tung-buoc.md](nop-bai/08-huong-dan-tung-buoc.md) |
 | Phân tích nghiệp vụ (BA) | [Trang BA](https://claude.ai/artifact/S3HXHY2s9fRihC4KYJfZu2) |
@@ -26,9 +64,7 @@ Bạn không cần biết code. Mỗi bước dưới đây đều có **mục �
 - **Kiểm thử:** 192 testcase. 75 đã chạy và đạt. 16 lỗi tìm ra, đã sửa, đã kiểm lại.
 - **Báo giá:** 49,9 triệu đồng (phương án đề xuất) hoặc 42,4 triệu đồng (tối thiểu) cho năm đầu, đã gồm vận hành 12 tháng.
 
----
-
-## Hành trình làm bài: 8 bước
+### Hành trình làm Câu 2: 8 bước
 
 ```mermaid
 flowchart LR
@@ -42,7 +78,7 @@ flowchart LR
   B8 -. lỗi tìm ra .-> B6
 ```
 
-### Bước 1. Đọc đề và tự tìm hiểu
+#### Bước 1. Đọc đề và tự tìm hiểu
 
 **Mục đích:** hiểu đề đang kiểm tra năng lực gì, và hiểu khách hàng qua những gì công khai. Không đoán thông tin nội bộ.
 
@@ -63,7 +99,7 @@ flowchart LR
 - [research/HANDOFF.md](research/HANDOFF.md): tóm tắt nghiên cứu, thứ tự đọc
 - Dữ liệu thô: [research/doppelherz_posts_all.csv](research/doppelherz_posts_all.csv) (2.125 bài), [research/doppelherz_san_pham_xnqc.csv](research/doppelherz_san_pham_xnqc.csv) (sản phẩm và số XNQC), [research/MANIFEST.csv](research/MANIFEST.csv) (mã kiểm tra từng file)
 
-### Bước 2. Phân tích nghiệp vụ (BA)
+#### Bước 2. Phân tích nghiệp vụ (BA)
 
 **Mục đích:** chuyển những gì tìm hiểu được thành bài toán của khách hàng: vấn đề, mục tiêu, chỉ số, phạm vi, ai làm gì.
 
@@ -76,10 +112,10 @@ flowchart LR
 
 **Xem ở đâu:**
 - [Trang BA](https://claude.ai/artifact/S3HXHY2s9fRihC4KYJfZu2): bản trình bày đầy đủ, theo khung BABOK v3
-- [nop-bai/01-cau-1-khao-sat-tu-dong-hoa.md](nop-bai/01-cau-1-khao-sat-tu-dong-hoa.md): Câu 1
+- [Trang Câu 1](https://claude.ai/artifact/FsKK78CG1AkM2sXtHRuBhn) và [nop-bai/01-cau-1-khao-sat-tu-dong-hoa.md](nop-bai/01-cau-1-khao-sat-tu-dong-hoa.md): Câu 1
 - [nop-bai/02-1-chan-doan-hien-trang.md](nop-bai/02-1-chan-doan-hien-trang.md): Câu 2.1, chẩn đoán và câu hỏi khảo sát
 
-### Bước 3. Viết Brief
+#### Bước 3. Viết Brief
 
 **Mục đích:** chốt một trang về "làm gì, vì sao, đến đâu" trước khi viết yêu cầu chi tiết.
 
@@ -89,7 +125,7 @@ flowchart LR
 
 **Xem ở đâu:** [SocialSync-Brief.md](SocialSync-Brief.md)
 
-### Bước 4. Viết PRD
+#### Bước 4. Viết PRD
 
 **Mục đích:** đặc tả đủ chi tiết để xây được và nghiệm thu được.
 
@@ -102,7 +138,7 @@ flowchart LR
 
 **Xem ở đâu:** [SocialSync-PRD.md](SocialSync-PRD.md)
 
-### Bước 5. Viết User Story và Workflow
+#### Bước 5. Viết User Story và Workflow
 
 **Mục đích:** nhìn toàn bộ sản phẩm trên một trang: ai cần gì, và một bài đi qua những bước nào.
 
@@ -116,7 +152,7 @@ flowchart LR
 - [nop-bai/04-so-do-quy-trinh.md](nop-bai/04-so-do-quy-trinh.md): kiến trúc, luồng một bài, vòng đời một lượt, màn hình
 - [nop-bai/05-bo-prompt.md](nop-bai/05-bo-prompt.md): prompt nguyên văn và kết quả thử
 
-### Bước 6. Xây sản phẩm
+#### Bước 6. Xây sản phẩm
 
 **Mục đích:** làm ra hệ thống chạy thật (mục 2.6 của đề), không chỉ trình bày trên giấy.
 
@@ -154,7 +190,7 @@ flowchart LR
 | Hướng dẫn dùng thử 5 phút | [nop-bai/06-san-pham-chay-that.md](nop-bai/06-san-pham-chay-that.md) |
 | Hướng dẫn có 16 ảnh chụp từng bước | [nop-bai/08-huong-dan-tung-buoc.md](nop-bai/08-huong-dan-tung-buoc.md) |
 
-### Bước 7. Xây bộ testcase
+#### Bước 7. Xây bộ testcase
 
 **Mục đích:** kiểm sản phẩm bằng con mắt khác với người xây.
 
@@ -170,7 +206,7 @@ flowchart LR
 
 **Xem ở đâu:** [kiem-thu/testcase-trung-tam-socialsync.md](kiem-thu/testcase-trung-tam-socialsync.md), mục 3
 
-### Bước 8. Kiểm thử và sửa lỗi
+#### Bước 8. Kiểm thử và sửa lỗi
 
 **Mục đích:** chứng minh sản phẩm chạy đúng, và ghi rõ phần chưa kiểm.
 
@@ -212,7 +248,7 @@ flowchart LR
 
 | Yêu cầu của đề | Tài liệu |
 |---|---|
-| Câu 1: tự động hóa theo phòng ban, ưu tiên, lợi ích, 3 hạng mục làm trước | [01-cau-1-khao-sat-tu-dong-hoa.md](nop-bai/01-cau-1-khao-sat-tu-dong-hoa.md) |
+| Câu 1: tự động hóa theo phòng ban, ưu tiên, lợi ích, 3 hạng mục làm trước | [Trang Câu 1](https://claude.ai/artifact/FsKK78CG1AkM2sXtHRuBhn), [01-cau-1-khao-sat-tu-dong-hoa.md](nop-bai/01-cau-1-khao-sat-tu-dong-hoa.md) |
 | 2.1 Chẩn đoán hiện trạng và câu hỏi khảo sát | [02-1-chan-doan-hien-trang.md](nop-bai/02-1-chan-doan-hien-trang.md) |
 | 2.2 Kế hoạch: giai đoạn, mốc, nhân sự, công cụ | [02-2-ke-hoach-trien-khai.md](nop-bai/02-2-ke-hoach-trien-khai.md) |
 | 2.3 Báo giá trong 40–50 triệu, gồm vận hành | [02-3-bao-gia.md](nop-bai/02-3-bao-gia.md) |
